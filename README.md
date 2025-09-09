@@ -1,2 +1,4 @@
 # WebProject2025ICE
-Repository for advICE members
+재미있게 행복하게 만들어봅시다.
+문제 있으면 조장 최은준에게 연락주십쇼
+-최은준-
