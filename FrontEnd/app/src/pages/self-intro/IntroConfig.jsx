@@ -1,4 +1,13 @@
-function IntroConfig() {
-  return <h1>Intro Config Page</h1>;
+import React from "react";
+import Header from "../../components/Header";
+
+export default function IntroConfig() {
+  return (
+    <>
+      <Header />
+      <main style={{ padding: "24px clamp(12px, 3vw, 32px)" }}>
+        <h1>Intro config page</h1>
+      </main>
+    </>
+  );
 }
-export default IntroConfig;

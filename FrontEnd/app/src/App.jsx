@@ -6,12 +6,13 @@ import Login from "./pages/Login";
 import ModifyPersonalInfo from "./pages/ModifyPersonalInfo";
 
 import StoreIntro from "./pages/mypage/StoreIntro";
-import StoreResume from "./pages/mypage/StoreResume";
 
 import IntroConfig from "./pages/self-intro/IntroConfig";
 import IntroDownload from "./pages/self-intro/IntroDownload";
 import IntroInfo from "./pages/self-intro/IntroInfo";
 import IntroLoading from "./pages/self-intro/IntroLoading";
+
+import GlobalStyle from "./GlobalStyle";
 
 function Menu() {
   const navigate = useNavigate();
@@ -31,7 +32,6 @@ function Menu() {
       <strong>mypage</strong>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={go("/mypage/store-intro")}>store_intro</button>
-        <button onClick={go("/mypage/store-resume")}>store_resume</button>
       </div>
 
       <strong>self_intro</strong>
@@ -63,7 +63,6 @@ export default function App() {
           <Route path="/modify" element={<ModifyPersonalInfo />} />
 
           <Route path="/mypage/store-intro" element={<StoreIntro />} />
-          <Route path="/mypage/store-resume" element={<StoreResume />} />
 
           <Route path="/self-intro/config" element={<IntroConfig />} />
           <Route path="/self-intro/download" element={<IntroDownload />} />
