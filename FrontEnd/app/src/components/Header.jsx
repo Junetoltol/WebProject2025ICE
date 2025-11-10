@@ -1,3 +1,4 @@
+// src/components/Header.jsx
 import React, { useEffect, useRef, useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { Link } from "react-router-dom";
@@ -7,6 +8,7 @@ import homeIcon from "../assets/homeButton.svg";
 import menuIcon from "../assets/menuButton.svg";
 import STCaiyunTTF from "../assets/fonts/STCaiyun/STCaiyun.ttf";
 
+/* STCaiyun 폰트 로드 */
 const FontFace = createGlobalStyle`
   @font-face {
     font-family: "STCaiyun";
@@ -16,6 +18,8 @@ const FontFace = createGlobalStyle`
     font-display: swap;
   }
 `;
+
+/* 외부 링크 기본 스타일 제거 */
 const CleanLink = styled(Link)`
   text-decoration: none;
   color: inherit;
@@ -23,18 +27,36 @@ const CleanLink = styled(Link)`
   align-items: center;
 `;
 
+/* ===== 헤더 핵심: 화면 상단 고정 + 전체 폭 채우기 ===== */
+export const HEADER_H = 80;
+
 const HeaderWrap = styled.header`
-  position: relative; /* 드롭다운 기준점 */
-  height: 80px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;          /* 가로 전체 */
+  height: ${HEADER_H}px;
   min-height: 60px;
+
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
+
   padding: 0 clamp(12px, 3vw, 32px);
+  margin: 0;         /* 혹시 모를 기본 마진 제거 */
   box-sizing: border-box;
-  z-index: 10;
+
+  /* 배경: 흰색(캡쳐처럼) — 필요하면 투명/반투명으로 바꿔도 됨 */
+  background-color: #ffffff;
+
+  /* 다른 콘텐츠 위에 올라오도록 충분히 크게 */
+  z-index: 100;
+
+  /* 헤더 아래에 살짝 그림자(선택) — 필요 없으면 삭제 */
+  /* box-shadow: 0 1px 8px rgba(0,0,0,0.06); */
 `;
 
+/* 타이틀 */
 const Title = styled.h1`
   grid-column: 2;
   margin: 0;
@@ -49,8 +71,9 @@ const Title = styled.h1`
 `;
 
 const Accent = styled.span` color: #00678c; `;
-const Rest   = styled.span` color: #000; `;
+const Rest   = styled.span` color: #000;   `;
 
+/* 우측 액션 영역 */
 const Actions = styled.nav`
   grid-column: 3;
   justify-self: end;
@@ -75,15 +98,16 @@ const IconImg = styled.img`
   display: block;
 `;
 
+/* 드롭다운 기준 앵커 */
 const MenuAnchor = styled.div`
-  position: relative; /* 드롭다운 기준점: 이 컨테이너 */
+  position: relative;
   display: inline-flex;
   align-items: center;
 `;
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const anchorRef = useRef(null); // ✅ 메뉴용 앵커 기준
+  const anchorRef = useRef(null);
 
   const toggleMenu = () => setMenuOpen(v => !v);
   const closeMenu  = () => setMenuOpen(false);
@@ -93,17 +117,16 @@ export default function Header() {
       if (!anchorRef.current) return;
       if (!anchorRef.current.contains(e.target)) closeMenu();
     }
-    // pointerdown이 가장 안정적 (mousedown/click 순서 이슈 방지)
     document.addEventListener("pointerdown", handleOutside);
     return () => document.removeEventListener("pointerdown", handleOutside);
   }, []);
 
-
-    return (
+  return (
     <>
       <FontFace />
 
       <HeaderWrap>
+        {/* 좌측 공간(그리드용) */}
         <div aria-hidden="true" />
 
         {/* 제목 클릭 → 홈 이동 */}
@@ -116,16 +139,15 @@ export default function Header() {
           </Title>
         </CleanLink>
 
+        {/* 우측 아이콘들 */}
         <Actions aria-label="Header actions">
-          {/* 홈 아이콘 클릭 → 홈 이동 */}
           <CleanLink to="/" aria-label="Go Home via Icon">
             <IconButton>
               <IconImg src={homeIcon} alt="" />
             </IconButton>
           </CleanLink>
 
-          {/* 메뉴 아이콘은 그대로 */}
- {/* ✅ 메뉴 버튼과 드롭다운을 하나의 앵커 컨테이너로 */}
+          {/* 메뉴 버튼 & 드롭다운 */}
           <MenuAnchor ref={anchorRef}>
             <IconButton
               aria-label="Open Menu"
@@ -137,7 +159,6 @@ export default function Header() {
               <IconImg src={menuIcon} alt="메뉴" />
             </IconButton>
 
-            {/* 버튼 바로 아래에 메뉴 출력 */}
             <HeaderMenu open={menuOpen} onItemClick={closeMenu} />
           </MenuAnchor>
         </Actions>
