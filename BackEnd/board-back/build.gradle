@@ -31,9 +31,6 @@ dependencies {
     
     // Spring Security Starter 추가 (자동으로 BCrypt 포함하도록)
     implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    //crypto만 의존성 직접 명시. (버전 써줘서 꼬이지 않게)
-    implementation 'org.springframework.boot:spring-boot-starter-security:3.3.4'
     implementation 'org.springframework.security:spring-security-crypto:6.3.3'
 
 
