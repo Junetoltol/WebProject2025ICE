@@ -1,14 +1,25 @@
 import React from "react";
-import Header from "../components/Header";
+import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
-
 
 import styled from "styled-components";
 import homeCharacter from "../assets/homeCharacter.png";
 import jobBuddyLogo from "../assets/Job Buddy logo.png";
 
+const PageLayer = styled.div`
+  position: relative;
+  z-index: 1;   /* 배경보다 항상 위 */
+  width: 100%;
+  min-height: 100vh;
+`;
+
 const Main = styled.main`
-background: linear-gradient(
+  position: relative;
+  z-index: 1;  /* 배경(0)보다 앞으로 */
+
+  padding-top: ${HEADER_H}px; /* 고정 헤더만큼 아래로 밀기 */
+
+  background: linear-gradient(
     180deg,
     rgba(41, 198, 255, 0.25) 0%,
     rgba(113, 189, 129, 0.25) 100%
@@ -20,6 +31,7 @@ background: linear-gradient(
   justify-content: flex-start;
   overflow-x: hidden;
 `;
+
 
 const Hero = styled.section`
   max-width: 1100px;
@@ -63,12 +75,14 @@ const SubText = styled.p`
   color: #1e3c4d;
   margin-bottom: 10px;
 `;
+
 const LogoImage = styled.img`
   width: 220px;
   height: auto;
   margin: 8px 0;
-  filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.1)); 
+  filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.1));
 `;
+
 const Button = styled.button`
   margin-top: 12px;
   background: #0b6a82;
@@ -136,44 +150,44 @@ const FeatureDesc = styled.div`
 export default function Home() {
   return (
     <>
-      <Background/>
-      <Header />
-      <Main>
-        <Hero>
-          <HeroText>
-            <HeroTitle>
-              <strong>AI</strong>와 함께 쓰는 나만의 지원서
-            </HeroTitle>
-            <SubText>자소서와 이력서, 이제 혼자가 아니라</SubText>
-            <LogoImage src={jobBuddyLogo} alt="Job Buddy 로고" />
-            <SubText>와 함께해요!</SubText>
-            <Button>자기소개서 생성</Button>
-          </HeroText>
+      <Background />
+      <PageLayer>
+        <Header />
+        <Main>
+          <Hero>
+            <HeroText>
+              <HeroTitle>
+                <strong>AI</strong>와 함께 쓰는 나만의 지원서
+              </HeroTitle>
+              <SubText>자소서와 이력서, 이제 혼자가 아니라</SubText>
+              <LogoImage src={jobBuddyLogo} alt="Job Buddy 로고" />
+              <SubText>와 함께해요!</SubText>
+              <Button>자기소개서 생성</Button>
+            </HeroText>
 
-          <HeroImage src={homeCharacter} alt="Job Buddy 캐릭터" />
-        </Hero>
+            <HeroImage src={homeCharacter} alt="Job Buddy 캐릭터" />
+          </Hero>
 
-        <Features>
-          <FeatureCard>
-            <FeatureTitle>동반자</FeatureTitle>
-            <FeatureDesc>
-              막막한 문장 작성부터 마지막 다듬기까지 함께!
-            </FeatureDesc>
-          </FeatureCard>
-          <FeatureCard>
-            <FeatureTitle>맞춤형</FeatureTitle>
-            <FeatureDesc>
-              수많은 합격 자소서 분석 기반, 직무별 맞춤 제안
-            </FeatureDesc>
-          </FeatureCard>
-          <FeatureCard>
-            <FeatureTitle>효율성</FeatureTitle>
-            <FeatureDesc>
-              시간 절약, 올라간 완성도
-            </FeatureDesc>
-          </FeatureCard>
-        </Features>
-      </Main>
+          <Features>
+            <FeatureCard>
+              <FeatureTitle>동반자</FeatureTitle>
+              <FeatureDesc>
+                막막한 문장 작성부터 마지막 다듬기까지 함께!
+              </FeatureDesc>
+            </FeatureCard>
+            <FeatureCard>
+              <FeatureTitle>맞춤형</FeatureTitle>
+              <FeatureDesc>
+                수많은 합격 자소서 분석 기반, 직무별 맞춤 제안
+              </FeatureDesc>
+            </FeatureCard>
+            <FeatureCard>
+              <FeatureTitle>효율성</FeatureTitle>
+              <FeatureDesc>시간 절약, 올라간 완성도</FeatureDesc>
+            </FeatureCard>
+          </Features>
+        </Main>
+      </PageLayer>
     </>
   );
 }
