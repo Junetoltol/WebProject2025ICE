@@ -51,6 +51,8 @@ export default function App() {
 
   return (
     <>
+      <GlobalStyle />
+
       {isMenuPage ? (
         // 처음 화면: 버튼 메뉴만 보임
         <Menu />
