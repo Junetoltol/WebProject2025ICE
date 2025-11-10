@@ -14,7 +14,7 @@ const Wrap = styled.div`
 const CenterArea = styled.div`
   max-width: 1100px;
   margin: 0 auto;
-  padding: 90px 24px 40px; /* 헤더만큼 아래로 */
+  padding: 20vh 24px 40px; /* 헤더만큼 아래로 */
   display: flex;
   justify-content: center;
 `;
