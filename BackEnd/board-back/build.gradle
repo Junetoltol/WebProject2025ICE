@@ -28,15 +28,16 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	
+	//Spring Security Starter(자동으로 크립토 포함하게)
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-	//Spring Security Crypto
-	implemantation 'org.springframework.security:spring-security-crypto:6.2.1'
 }
 
 tasks.named('test') {
