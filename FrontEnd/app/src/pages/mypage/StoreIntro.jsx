@@ -14,7 +14,7 @@ const Wrap = styled.div`
 const Container = styled.div`
   max-width: 1100px;
   margin: 0 auto;
-  padding: 90px 24px 40px;
+  padding: 20vh 24px 40px;
 `;
 
 const Box = styled.div`
