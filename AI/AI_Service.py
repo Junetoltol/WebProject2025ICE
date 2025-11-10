@@ -1,3 +1,4 @@
+'''
 import os
 import json
 from typing import Any, Dict, List, Optional, Tuple
@@ -216,3 +217,4 @@ if __name__ == "__main__":
 """
     result = generate_resume_draft(user_data, company_data)
     print(json.dumps(result, ensure_ascii=False, indent=2))
+'''
