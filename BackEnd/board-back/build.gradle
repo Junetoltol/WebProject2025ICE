@@ -31,6 +31,8 @@ dependencies {
     
     // Spring Security Starter 추가 (자동으로 BCrypt 포함하도록)
     implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.security:spring-security-crypto'
+
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
