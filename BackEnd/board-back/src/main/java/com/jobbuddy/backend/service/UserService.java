@@ -7,6 +7,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
@@ -14,25 +15,33 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
-    // 회원가입
+    private final Pattern PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\-]).{8,}$");
+
     public void signup(User user) {
+        if (userRepository.findByUsername(user.getUsername()).isPresent())
+            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
+        if (!PASSWORD_PATTERN.matcher(user.getPassword()).matches())
+            throw new IllegalArgumentException("비밀번호 형식이 올바르지 않습니다.");
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
     }
 
-    // 로그인
     public boolean login(String username, String rawPassword) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         return userOpt.isPresent() && passwordEncoder.matches(rawPassword, userOpt.get().getPassword());
     }
 
-    // 개인정보 수정
+    public boolean isUsernameAvailable(String username) {
+        return userRepository.findByUsername(username).isEmpty();
+    }
+
     public boolean updateProfile(String username, String name, String univ, String major) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) return false;
-
         User user = userOpt.get();
         user.setName(name);
         user.setUniv(univ);
@@ -41,17 +50,21 @@ public class UserService {
         return true;
     }
 
-    // 비밀번호 변경
-    public boolean changePassword(String username, String currentPassword, String newPassword, String confirmPassword) {
+    public void changePassword(String username, String currentPassword, String newPassword, String confirmPassword) {
         Optional<User> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) return false;
-
+        if (userOpt.isEmpty()) throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
         User user = userOpt.get();
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) return false;
-        if (!newPassword.equals(confirmPassword)) return false;
-
+        if (!passwordEncoder.matches(currentPassword, user.getPassword()))
+            throw new SecurityException("비밀번호가 틀렸습니다.");
+        if (!newPassword.equals(confirmPassword))
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        if (!PASSWORD_PATTERN.matcher(newPassword).matches())
+            throw new IllegalArgumentException("새 비밀번호 형식이 올바르지 않습니다.");
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        return true;
+    }
+
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username).orElse(null);
     }
 }
