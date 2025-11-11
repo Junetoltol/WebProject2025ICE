@@ -46,3 +46,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// 부트런 메인 클래스를 백엔드 브랜치로 지정
+tasks.named('bootRun') {
+    mainClass.set('com.webproject.board_back.BoardBackApplication')
+}
