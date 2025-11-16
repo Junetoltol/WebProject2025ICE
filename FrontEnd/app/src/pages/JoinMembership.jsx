@@ -2,21 +2,26 @@ import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import Header from "../components/Header";
 import Background from "../components/Background";
-// import axios from "axios"; // ⚙️ 나중에 실제 서버 통신 시 사용 (npm install axios)
 
 const Global = createGlobalStyle`
   :root{
-    --gap-header-card: 20vh;
-    --gap-input: 3.5vh;
-    --gap-btn-bottom: 3.2vh;
-    --card-w: min(88vw, 36rem);
-    --card-p: clamp(1.25rem, 2.5vw, 2rem);
-    --card-pt: calc(var(--card-p) / 2);
-    --card-px: var(--card-p);
-    --card-pb: var(--card-p);
-    --gap-page-bottom: 8vh;
-    --title-top: calc(var(--card-pt) / 2);
-    --radius: 1.25rem;
+    /* 🔢 전부 px로 고정 */
+    --gap-header-card: 90px;      /* 헤더 아래 ~ 카드 위 */
+    --gap-input: 25px;            /* 각 입력 그룹 사이 */
+    --gap-btn-bottom: 0px;       /* 가입 버튼 ~ 로그인 라인 */
+    --gap-page-bottom: 64px;      /* 카드 아래 여백 */
+
+    --card-w: 540px;
+    --card-h: 780px;
+
+    --card-p: 40px;               /* 카드 패딩 */
+    --card-pt: 40px;
+    --card-px: 40px;
+    --card-pb: 40px;
+
+    --title-top: 16px;            /* 카드 내부에서 제목 위쪽 여백 */
+    --radius: 20px;
+
     --primary: var(--jb-primary, #0f7f90);
     --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
   }
@@ -25,7 +30,7 @@ const Global = createGlobalStyle`
 const Layer = styled.div`
   position: relative;
   z-index: 1;
-  min-height: 92vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -35,45 +40,51 @@ const Card = styled.div`
   margin-top: var(--gap-header-card);
   margin-bottom: var(--gap-page-bottom);
   width: var(--card-w);
+  height: var(--card-h);
+  flex-shrink: 0;
+  box-sizing: border-box;
+
   background: #fff;
   border-radius: var(--radius);
   padding: var(--card-pt) var(--card-px) var(--card-pb);
-  box-shadow: 0 0.5vh 1.2vh rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
   display: flex;
   flex-direction: column;
   gap: var(--gap-input);
 `;
 
+
 const Title = styled.h2`
-  margin: var(--title-top) 0 2vh 0;
+  margin: var(--title-top) 0 25px 0;
   text-align: center;
-  font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+  font-size: 24px;
   font-weight: 700;
 `;
 
 const Group = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1.2vh;
+  gap: 8px;
 `;
 
 const Label = styled.label`
   font-weight: 600;
-  font-size: clamp(0.9rem, 2vw, 1rem);
+  font-size: 16px;
 `;
 
 const Row = styled.div`
   display: flex;
-  gap: 1vw;
+  gap: 8px;
   align-items: center;
 `;
 
 const Input = styled.input`
   flex: 1;
   border: 1px solid #ccc;
-  border-radius: 0.5rem;
-  padding: 0.8rem 1rem;
-  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
   background: #fff;
 `;
 
@@ -81,9 +92,9 @@ const Btn = styled.button`
   background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 0.5rem;
-  padding: 0.8rem 1rem;
-  font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
   cursor: pointer;
   &:active {
     background: var(--primary-pressed);
@@ -91,22 +102,22 @@ const Btn = styled.button`
 `;
 
 const JoinBtn = styled(Btn)`
-  border-radius: 0.7rem;
-  padding: 1rem;
+  border-radius: 12px;
+  padding: 14px;
   margin-top: var(--gap-input);
-  font-size: clamp(1rem, 2vw, 1.1rem);
+  font-size: 16px;
   font-weight: 600;
 `;
 
 const LoginLine = styled.div`
   text-align: center;
   margin-top: var(--gap-btn-bottom);
-  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  font-size: 14px;
   a {
     color: var(--primary);
     font-weight: 600;
     text-decoration: none;
-    margin-left: 0.3rem;
+    margin-left: 4px;
   }
   a:hover {
     text-decoration: underline;
@@ -114,45 +125,28 @@ const LoginLine = styled.div`
 `;
 
 export default function JoinMembership() {
-  /* ✅ 1️⃣ 회원가입 입력값 state */
   const [formData, setFormData] = useState({
-    userId: "",      // 사용자 ID (필수)
-    password: "",    // 비밀번호 (필수)
-    name: "",        // 이름 (필수)
-    univ: "",        // 학교 (선택)
-    major: "",       // 전공 (선택)
+    userId: "",
+    password: "",
+    name: "",
+    univ: "",
+    major: "",
   });
 
-  /* ✅ 2️⃣ 입력값 변경 핸들러 */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  /* ✅ 3️⃣ 가입 버튼 클릭 시 실행할 함수 */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ⚠️ 필수 입력값 검증 (API 명세 기준: userId, password, name 필수)
     if (!formData.userId.trim() || !formData.password.trim() || !formData.name.trim()) {
       alert("아이디, 비밀번호, 이름은 필수 입력 항목입니다.");
       return;
     }
 
-    // ⚙️ 실제 서버 통신 로직 (아직 구현 X)
-    // try {
-    //   const response = await axios.post("/api/auth/signup", formData, {
-    //     headers: { "Content-Type": "application/json" },
-    //   });
-    //   if (response.status === 201) {
-    //     alert("회원가입이 성공적으로 완료되었습니다!");
-    //   }
-    // } catch (error) {
-    //   console.error(error);
-    //   alert("회원가입에 실패했습니다. 다시 시도해주세요.");
-    // }
-
-    // 💡 위 axios.post는 나중에 백엔드 서버가 연결되면 활성화할 부분입니다.
+    // 추후 axios.post("/api/auth/signup", formData, ...) 연결
   };
 
   return (
@@ -164,7 +158,6 @@ export default function JoinMembership() {
         <Card as="form" onSubmit={handleSubmit}>
           <Title>회원가입</Title>
 
-          {/* ✅ 필수 입력: 사용자 아이디 */}
           <Group>
             <Label>아이디 *</Label>
             <Input
@@ -176,7 +169,6 @@ export default function JoinMembership() {
             />
           </Group>
 
-          {/* ✅ 필수 입력: 비밀번호 */}
           <Group>
             <Label>비밀번호 *</Label>
             <Input
@@ -189,7 +181,6 @@ export default function JoinMembership() {
             />
           </Group>
 
-          {/* ✅ 필수 입력: 이름 */}
           <Group>
             <Label>이름 *</Label>
             <Input
@@ -201,7 +192,6 @@ export default function JoinMembership() {
             />
           </Group>
 
-          {/* 🟢 선택 입력: 학교 */}
           <Group>
             <Label>학교</Label>
             <Input
@@ -212,7 +202,6 @@ export default function JoinMembership() {
             />
           </Group>
 
-          {/* 🟢 선택 입력: 전공 */}
           <Group>
             <Label>전공</Label>
             <Input
@@ -223,7 +212,6 @@ export default function JoinMembership() {
             />
           </Group>
 
-          {/* ✅ 가입하기 버튼 (submit 시 handleSubmit 실행) */}
           <JoinBtn type="submit">가입하기</JoinBtn>
 
           <LoginLine>

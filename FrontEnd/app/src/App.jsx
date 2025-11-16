@@ -3,7 +3,8 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import JoinMembership from "./pages/JoinMembership";
 import Login from "./pages/Login";
-import ModifyPersonalInfo from "./pages/ModifyPersonalInfo";
+import PersonInfo from "./pages/modify/PersonInfo";
+import Password from "./pages/modify/Password"
 
 import StoreIntro from "./pages/mypage/StoreIntro";
 
@@ -24,7 +25,7 @@ function Menu() {
         <button onClick={go("/home")}>Home</button>
         <button onClick={go("/join")}>Join_membership</button>
         <button onClick={go("/login")}>Login</button>
-        <button onClick={go("/modify")}>Modify_personal_info</button>
+        <button onClick={go("/modify/PersonInfo")}>personal_info</button>
       </div>
 
       <hr />
@@ -62,7 +63,9 @@ export default function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/join" element={<JoinMembership />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/modify" element={<ModifyPersonalInfo />} />
+          <Route path="/modify" element={<PersonInfo />} />
+          <Route path="/modify/PersonInfo" element={<PersonInfo />} />
+          <Route path="/modify/Password" element={<Password />} />
 
           <Route path="/mypage/store-intro" element={<StoreIntro />} />
 

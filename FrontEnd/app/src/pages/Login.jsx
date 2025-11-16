@@ -9,37 +9,37 @@ const Global = createGlobalStyle`
   /* 레이아웃 기본값 초기화 (위쪽 여백 방지) */
   html, body, #root { height: 100%; margin: 0; padding: 0; }
   *, *::before, *::after { box-sizing: border-box; }
-  #root { position: relative; isolation: isolate; } /* z-index 컨텍스트 안정화 */
+  #root { position: relative; isolation: isolate; }
   body { background: transparent; }
 
-  :root{
-    /* 스크린샷의 간격값을 비율로 변환 (px 금지) */
-    --gap-header-card: 12vh;  /* ≈ 90px */
-    --gap-title-first: 3.5vh; /* ≈ 25px */
-    --gap-inputs-btn: 5.5vh;  /* ≈ 49px */
-    --gap-btn-bottom: 4vh;    /* ≈ 30px */
+:root{
+  --gap-header-card: 90px;
+  --gap-title-first: 25px;
 
-    --card-w: min(88vw, 36rem);
-    --card-p: clamp(1.25rem, 2.5vw, 2rem);
-    --radius: 1.25rem;
+  --gap-inputs-btn: 20px;   /* ⬅ 변경됨 */
+  --gap-btn-bottom: 10px;   /* ⬅ 변경됨 */
 
-    --primary: var(--jb-primary, #0f7f90);
-    --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
-    --shadow: 0 0.4rem 1.2rem rgba(0 0 0 / 0.12);
-    --field-h: 2.75rem;
-  }
+  --card-w: 540px;
+  --card-h: 490px;
+
+  --card-p: 40px;
+  --radius: 20px;
+
+  --primary: var(--jb-primary, #0f7f90);
+  --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
+  --shadow: 0 6px 18px rgba(0,0,0,0.12);
+  --field-h: 44px;
+}
+
 `;
 
 export default function Login() {
   return (
     <>
       <Global />
-      {/* 화면 전체 고정 배경: children 없음 */}
       <Background />
-      {/* 상단 고정 헤더 */}
       <Header />
 
-      {/* 페이지 콘텐츠 */}
       <Page>
         <Card role="region" aria-label="로그인 카드">
           <Title aria-label="Job Buddy">
@@ -78,27 +78,33 @@ export default function Login() {
 }
 
 /* 색상 조합 */
-const Accent = styled.span` color: #00678c; `;
-const Rest   = styled.span` color: #000; `;
+const Accent = styled.span` 
+  color: #00678c; 
+`;
+const Rest = styled.span` 
+  color: #000; 
+`;
 
 /* 헤더가 fixed이므로, 헤더 높이 + 원하는 간격만큼 상단 패딩 */
 const Page = styled.main`
-  min-height: 100dvh;
+  min-height: 100vh;
   display: grid;
   place-items: start center;
   padding-top: calc(${HEADER_H}px + var(--gap-header-card));
-  padding-left: clamp(12px, 3vw, 32px);
-  padding-right: clamp(12px, 3vw, 32px);
+  padding-left: 24px;
+  padding-right: 24px;
   padding-bottom: 24px;
 `;
 
 const Card = styled.section`
   width: var(--card-w);
+  height: var(--card-h);
   padding: var(--card-p);
   border-radius: var(--radius);
-  background: rgba(255 255 255 / 0.92);
-  backdrop-filter: saturate(120%) blur(0.2rem);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(120%) blur(3px);
   box-shadow: var(--shadow);
+  box-sizing: border-box;
 `;
 
 const Title = styled.h1`
@@ -107,68 +113,70 @@ const Title = styled.h1`
   font-weight: 400;
   line-height: 1.1;
   text-align: center;
-  /* clamp(min, preferred, max) — 순서 수정 */
-  font-size: clamp(2.4rem, 3.2vw, 3rem);
-  letter-spacing: 0.02em;
+  font-size: 40px;        /* clamp 대신 고정 px */
+  letter-spacing: 0.8px;
+  margin: 0;
 `;
 
 const Subtitle = styled.p`
   text-align: center;
   opacity: 0.8;
-  margin-top: 0.75rem;
-  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  margin-top: 12px;
+  margin-bottom: 0;
+  font-size: 16px;
 `;
 
 const Form = styled.form`
   display: grid;
-  gap: 1.2rem; /* 필드 사이 기본 간격(비율 기반 rem) */
+  gap: 20px;              /* 필드 그룹 기본 간격 */
+  margin-top: 0;
 `;
 
 const FieldGroup = styled.div`
   display: grid;
-  gap: 0.6rem;
+  gap: 10px;
 `;
 
 const Label = styled.label`
-  font-size: clamp(0.9rem, 1.6vw, 1rem);
+  font-size: 16px;
   font-weight: 700;
 `;
 
 const Input = styled.input`
   height: var(--field-h);
-  padding: 0 1rem;
+  padding: 0 16px;
   border: 0;
   outline: 0;
-  border-radius: 0.7rem;
-  background: rgba(255 255 255 / 0.9);
-  box-shadow: inset 0 0 0 0.12rem rgba(0 0 0 / 0.1);
-  font-size: 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
 
   &::placeholder { opacity: 0.6; }
 
   &:focus {
     box-shadow:
-      inset 0 0 0 0.12rem rgba(0 0 0 / 0.1),
-      0 0 0 0.18rem color-mix(in oklab, var(--primary) 25%, white);
+      inset 0 0 0 2px rgba(0, 0, 0, 0.1),
+      0 0 0 3px color-mix(in oklab, var(--primary) 25%, white);
   }
 `;
 
 const Button = styled.button`
-  height: calc(var(--field-h) * 0.95);
+  height: 42px;
   border: 0;
   outline: 0;
-  border-radius: 999rem;
+  border-radius: 999px;
   background: var(--primary);
   color: #fff;
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 0.25rem 0 rgba(0 0 0 / 0.25);
+  letter-spacing: 0.8px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
   cursor: pointer;
 
   &:active {
-    transform: translateY(0.15rem);
-    box-shadow: 0 0.12rem 0 rgba(0 0 0 / 0.25);
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
     background: var(--primary-pressed);
   }
 `;
@@ -177,9 +185,9 @@ const BottomRow = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.6rem;
-  font-size: clamp(0.9rem, 1.6vw, 1rem);
-  color: rgba(0 0 0 / 0.8);
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.8);
 `;
 
 const CleanLink = styled(Link)`

@@ -39,7 +39,6 @@ export default function HeaderMenu({ open, onItemClick }) {
       <Item to="/mypage/store-intro" onClick={onItemClick}>My 자소서 보관함</Item>
 
       {/* 3) 개인정보 수정 */}
-      <Item to="/modify" onClick={onItemClick}>개인정보 수정</Item>
-    </MenuWrap>
+      <Item to="/modify/PersonInfo" onClick={onItemClick}>개인정보 수정</Item>    </MenuWrap>
   );
 }
