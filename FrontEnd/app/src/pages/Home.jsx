@@ -19,7 +19,7 @@ const Main = styled.main`
 
   padding-top: ${HEADER_H}px; /* 고정 헤더만큼 아래로 밀기 */
 
-  background:background: linear-gradient(
+  background: linear-gradient(
     180deg,
     rgba(41, 198, 255, 0.25) 0%,
     rgba(113, 189, 129, 0.25) 100%
