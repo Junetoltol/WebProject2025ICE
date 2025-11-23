@@ -1,4 +1,4 @@
-package com.jobbuddy.model;
+package com.jobbuddy.backend.model;
 
 import jakarta.persistence.*;
 
