@@ -1,9 +1,9 @@
-package com.jobbuddy.controller;
+package com.jobbuddy.backend.controller;
 
-import com.jobbuddy.dto.ApiResponse;
-import com.jobbuddy.dto.AuthDto;
-import com.jobbuddy.model.User;
-import com.jobbuddy.service.UserService;
+import com.jobbuddy.backend.dto.ApiResponse;
+import com.jobbuddy.backend.dto.AuthDto;
+import com.jobbuddy.backend.model.User;
+import com.jobbuddy.backend.service.UserService;
 import com.jobbuddy.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,8 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
@@ -22,7 +23,7 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     // 회원가입
-    @PostMapping("/auth/signup")
+    @PostMapping("/signup")
     public ResponseEntity<ApiResponse<Void>> signup(@RequestBody User user) {
         try {
             userService.signup(user);
@@ -35,8 +36,8 @@ public class AuthController {
     }
 
     // 로그인
-    @PostMapping("/auth/login")
-    public ResponseEntity<ApiResponse<AuthDto.LoginResponse>> login(@RequestBody AuthDto.LoginRequest request) {
+    @PostMapping("/login")
+   public ResponseEntity<ApiResponse<AuthDto.LoginResponse>> login(@RequestBody AuthDto.LoginRequest request) {
         boolean success = userService.login(request.getUsername(), request.getPassword());
         if (success) {
             String token = jwtUtil.generateToken(request.getUsername());
@@ -49,7 +50,7 @@ public class AuthController {
     }
 
     // ID 중복 체크
-    @GetMapping("/auth/id")
+    @GetMapping("/id")
     public ResponseEntity<ApiResponse<Void>> checkId(@RequestParam String username) {
         boolean available = userService.isUsernameAvailable(username);
         if (available)
@@ -100,4 +101,12 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(404, "사용자를 찾을 수 없습니다.", null));
     }
+
+    //테스트. 지울꺼.@GetMapping("
+
+    @GetMapping("/ping")
+    public String ping() {
+        return "pong";
+}
+    
 }

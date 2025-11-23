@@ -1,10 +1,13 @@
-package com.jobbuddy.service;
+package com.jobbuddy.backend.service;
 
-import com.jobbuddy.model.User;
-import com.jobbuddy.repository.UserRepository;
+import com.jobbuddy.backend.model.User;
+import com.jobbuddy.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+
 
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -16,7 +19,7 @@ public class UserService {
     private UserRepository userRepository;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     private final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\-]).{8,}$");
@@ -68,3 +71,4 @@ public class UserService {
         return userRepository.findByUsername(username).orElse(null);
     }
 }
+

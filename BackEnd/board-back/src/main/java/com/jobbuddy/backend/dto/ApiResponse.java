@@ -1,4 +1,4 @@
-package com.jobbuddy.dto;
+package com.jobbuddy.backend.dto;
 
 public class ApiResponse<T> {
     private int code;
