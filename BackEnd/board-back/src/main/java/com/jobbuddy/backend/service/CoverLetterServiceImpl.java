@@ -1,4 +1,5 @@
 package com.jobbuddy.backend.service;
+//만든놈 최은준
 
 import com.jobbuddy.backend.dto.CoverLetterPreviewResponse;
 import com.jobbuddy.backend.model.CoverLetter;

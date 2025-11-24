@@ -1,4 +1,5 @@
 package com.jobbuddy.backend.config;
+//수정한놈 최은준
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

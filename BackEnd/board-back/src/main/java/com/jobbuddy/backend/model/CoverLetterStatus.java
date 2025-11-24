@@ -1,4 +1,5 @@
 package com.jobbuddy.backend.model;
+//만든놈 최은준
 
 public enum CoverLetterStatus {
     PROCESSING,  // AI가 아직 생성 중

@@ -1,5 +1,6 @@
 // src/main/java/com/jobbuddy/model/CoverLetter.java
 package com.jobbuddy.backend.model;
+//만든놈 최은준
 
 import jakarta.persistence.*;
 
