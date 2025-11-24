@@ -95,3 +95,62 @@ public class CoverLetter {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }
+
+
+    // 지원 회사명
+    private String targetCompany;
+
+    // 지원 직무
+    private String targetJob;
+    
+    // 템플릿 ID (명세서 2번 기능 대응)
+    private String templateId;
+
+    // 상세 섹션 정보 (JSON 타입)
+    // build.gradle에 hibernate-core 의존성이 있으므로 사용 가능
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private java.util.Map<String, Object> sections;
+
+    // --- 비즈니스 로직 메서드 추가 ---
+
+    // 정보 업데이트 (저장/수정)
+    public void updateContent(String title, String targetCompany, String targetJob, java.util.Map<String, Object> sections) {
+        this.title = title;
+        this.targetCompany = targetCompany;
+        this.targetJob = targetJob;
+        this.sections = sections;
+        this.onUpdate(); // 시간 갱신
+    }
+
+    // 제목만 변경 (이름 변경 API용)
+    public void updateTitle(String title) {
+        this.title = title;
+        this.onUpdate();
+    }
+    
+    // 템플릿 ID 변경
+    public void updateTemplate(String templateId) {
+        this.templateId = templateId;
+        this.onUpdate();
+    }
+
+    // 생성 완료 처리
+    public void completeGeneration(String previewUrl) {
+        this.status = CoverLetterStatus.SUCCESS;
+        this.previewUrl = previewUrl;
+        this.onUpdate();
+    }
+    
+    // 상태 변경 (생성 시작 시)
+    public void startProcessing() {
+        this.status = CoverLetterStatus.PROCESSING;
+        this.onUpdate();
+    }
+
+    // Getter 추가
+    public String getTargetCompany() { return targetCompany; }
+    public String getTargetJob() { return targetJob; }
+    public String getTemplateId() { return templateId; }
+    public java.util.Map<String, Object> getSections() { return sections; }
+

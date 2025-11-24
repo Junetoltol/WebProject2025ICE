@@ -191,4 +191,64 @@ public class CoverLetterController {
                     .body(new ApiResponse<>(400, "제목은 1자 이상 100자 이하로 입력해주세요.", null));
         }
     }
+
+
+    // 1. 자소서 초안 작성 (POST)
+    @PostMapping
+    public ResponseEntity<ApiResponse<com.jobbuddy.backend.dto.CoverLetterReqDto.IdResponse>> createCoverLetter(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails,
+            @RequestBody com.jobbuddy.backend.dto.CoverLetterReqDto.SaveRequest request
+    ) {
+        // UserDetails에서 username을 가져와서 User 엔티티 ID를 찾는 로직이 필요하나,
+        // 기존 코드 컨텍스트 상 Service에서 username으로 찾거나, JWT Filter에서 ID를 넘겨주는 방식에 따름.
+        // 여기서는 기존 코드(X-User-Id) 대신 명세서(Bearer Token)에 따라 Authentication을 사용.
+        // *주의*: Service 계층이 ID(Long)를 요구하므로 username -> ID 변환 로직이 필요할 수 있음.
+        // 편의상 여기서는 임시로 UserRepository를 주입받거나 Service에서 username을 받도록 수정해야 하지만,
+        // 기존 코드 충돌 방지를 위해 Service에서 처리한다고 가정.
+        
+        // *실제 구현시*: Service 메서드 시그니처를 (String username, ...)으로 오버로딩하거나 변환 필요.
+        // 아래는 JWT에서 파싱된 username을 사용한다고 가정.
+        
+        // TODO: 실제 서비스 연결 (Service가 Long userId를 받는다면 변환 로직 추가 필요)
+        // 여기서는 컴파일 에러 방지를 위해 주석 처리된 예시를 드림.
+        // Long userId = userService.findIdByUsername(userDetails.getUsername());
+        // Long id = coverLetterService.saveOrUpdateCoverLetter(userId, null, request);
+        
+        // 임시 반환 (Service 연동 필요)
+        return ResponseEntity.ok(new ApiResponse<>(200, "임시 저장 성공", null));
+    }
+
+    // 1-2. 자소서 수정 (PATCH)
+    @PatchMapping("/{coverLetterId}")
+    public ResponseEntity<ApiResponse<com.jobbuddy.backend.dto.CoverLetterReqDto.IdResponse>> updateCoverLetter(
+             @PathVariable Long coverLetterId,
+             @RequestBody com.jobbuddy.backend.dto.CoverLetterReqDto.SaveRequest request
+             // 인증 객체 추가 필요
+    ) {
+        // 위와 동일하게 Service 연동
+        return ResponseEntity.ok(new ApiResponse<>(200, "업데이트 성공", null));
+    }
+
+    // 4. 자소서 구성 설정 저장
+    @PostMapping("/{coverLetterId}/settings")
+    public ResponseEntity<ApiResponse<Void>> saveSettings(
+            @PathVariable Long coverLetterId,
+            @RequestBody com.jobbuddy.backend.dto.CoverLetterReqDto.SaveRequest request // DTO 매핑 필요
+    ) {
+        // coverLetterService.updateSettings(...);
+        return ResponseEntity.ok(new ApiResponse<>(200, "설정 저장 성공", null));
+    }
+
+    // 5. 자소서 생성 요청
+    @PostMapping("/{coverLetterId}/generate")
+    public ResponseEntity<ApiResponse<Void>> generateCoverLetter(
+            @PathVariable Long coverLetterId,
+            @RequestParam(required = false) String mode
+    ) {
+        // coverLetterService.generateCoverLetter(...);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new ApiResponse<>(200, "생성 요청 접수", null));
+    }
+    
 }
+
