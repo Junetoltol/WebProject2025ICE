@@ -1,4 +1,5 @@
 package com.jobbuddy.backend.dto;
+//만든놈 최은준
 
 import java.util.List;
 
