@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import styled, { createGlobalStyle } from "styled-components";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
@@ -12,28 +12,86 @@ const Global = createGlobalStyle`
   #root { position: relative; isolation: isolate; }
   body { background: transparent; }
 
-:root{
-  --gap-header-card: 90px;
-  --gap-title-first: 25px;
+  :root{
+    --gap-header-card: 90px;
+    --gap-title-first: 25px;
 
-  --gap-inputs-btn: 20px;   /* ⬅ 변경됨 */
-  --gap-btn-bottom: 10px;   /* ⬅ 변경됨 */
+    --gap-inputs-btn: 20px;
+    --gap-btn-bottom: 10px;
 
-  --card-w: 540px;
-  --card-h: 490px;
+    --card-w: 540px;
+    --card-h: 490px;
 
-  --card-p: 40px;
-  --radius: 20px;
+    --card-p: 40px;
+    --radius: 20px;
 
-  --primary: var(--jb-primary, #0f7f90);
-  --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
-  --shadow: 0 6px 18px rgba(0,0,0,0.12);
-  --field-h: 44px;
-}
-
+    --primary: var(--jb-primary, #0f7f90);
+    --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
+    --shadow: 0 6px 18px rgba(0,0,0,0.12);
+    --field-h: 44px;
+  }
 `;
 
+const BACKEND_BASE_URL = "http://localhost:8080"; // ✅ 백엔드 주소/포트에 맞게 수정해서 사용
+
 export default function Login() {
+  const [id, setId] = useState("");
+  const [pw, setPw] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!id || !pw) {
+      alert("아이디와 비밀번호를 모두 입력해주세요.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // 🟢 백엔드에서 기대하는 필드명: username / password
+        body: JSON.stringify({
+          username: id,
+          password: pw,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (res.ok && json) {
+        const { status, message, data } = json;
+
+        if (status === 200 && data) {
+          const { tokenType, accessToken } = data;
+
+          // 🔐 토큰 저장 (나중에 Authorization 헤더에 사용)
+          const authToken = `${tokenType} ${accessToken}`; // "Bearer xxxxxx"
+          localStorage.setItem("authToken", authToken);
+
+          alert(message || "로그인에 성공했습니다.");
+
+          // ✅ 로그인 성공 후 이동할 페이지 (원하는 경로로 바꿔도 됨)
+          navigate("/");
+        } else {
+          alert(message || "로그인에 실패했습니다.");
+        }
+      } else {
+        const msg = json?.message || "아이디 또는 비밀번호가 일치하지 않습니다.";
+        alert(msg);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("서버와 통신 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Global />
@@ -51,19 +109,36 @@ export default function Login() {
 
           <Subtitle>와 함께, 새로운 시작을 해보세요.</Subtitle>
 
-          <Form>
+          <Form onSubmit={handleSubmit}>
             <FieldGroup style={{ marginTop: "var(--gap-title-first)" }}>
               <Label htmlFor="id">아이디</Label>
-              <Input id="id" name="id" placeholder="아이디" />
+              <Input
+                id="id"
+                name="id"
+                placeholder="아이디"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+              />
             </FieldGroup>
 
             <FieldGroup>
               <Label htmlFor="pw">비밀번호</Label>
-              <Input id="pw" name="pw" type="password" placeholder="비밀번호" />
+              <Input
+                id="pw"
+                name="pw"
+                type="password"
+                placeholder="비밀번호"
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+              />
             </FieldGroup>
 
-            <Button style={{ marginTop: "var(--gap-inputs-btn)" }}>
-              로그인
+            <Button
+              type="submit"
+              style={{ marginTop: "var(--gap-inputs-btn)" }}
+              disabled={loading}
+            >
+              {loading ? "로그인 중..." : "로그인"}
             </Button>
 
             <BottomRow style={{ marginTop: "var(--gap-btn-bottom)" }}>
@@ -78,11 +153,11 @@ export default function Login() {
 }
 
 /* 색상 조합 */
-const Accent = styled.span` 
-  color: #00678c; 
+const Accent = styled.span`
+  color: #00678c;
 `;
-const Rest = styled.span` 
-  color: #000; 
+const Rest = styled.span`
+  color: #000;
 `;
 
 /* 헤더가 fixed이므로, 헤더 높이 + 원하는 간격만큼 상단 패딩 */
@@ -113,7 +188,7 @@ const Title = styled.h1`
   font-weight: 400;
   line-height: 1.1;
   text-align: center;
-  font-size: 40px;        /* clamp 대신 고정 px */
+  font-size: 40px;
   letter-spacing: 0.8px;
   margin: 0;
 `;
@@ -128,7 +203,7 @@ const Subtitle = styled.p`
 
 const Form = styled.form`
   display: grid;
-  gap: 20px;              /* 필드 그룹 기본 간격 */
+  gap: 20px;
   margin-top: 0;
 `;
 
@@ -152,7 +227,9 @@ const Input = styled.input`
   box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.1);
   font-size: 16px;
 
-  &::placeholder { opacity: 0.6; }
+  &::placeholder {
+    opacity: 0.6;
+  }
 
   &:focus {
     box-shadow:
@@ -179,6 +256,13 @@ const Button = styled.button`
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
     background: var(--primary-pressed);
   }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: default;
+    transform: none;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  }
 `;
 
 const BottomRow = styled.div`
@@ -195,5 +279,7 @@ const CleanLink = styled(Link)`
   text-decoration: none;
   font-weight: 700;
 
-  &:hover { text-decoration: underline; }
+  &:hover {
+    text-decoration: underline;
+  }
 `;
