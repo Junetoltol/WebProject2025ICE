@@ -1,11 +1,80 @@
 // src/pages/modify/PersonInfo.jsx
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-import { Link } from "react-router-dom";   // ★ Link 추가
+import { Link, useNavigate } from "react-router-dom"; // ★ useNavigate 추가
 import Header from "../../components/Header";
 import Background from "../../components/Background";
 
 export default function PersonInfo() {
+  // ====== 상태 관리 (이름 / 학교 / 전공 + 에러/성공 메시지) ======
+  const [name, setName] = useState("");
+  const [univ, setUniv] = useState("");
+  const [major, setMajor] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const navigate = useNavigate();
+
+  // ====== 저장하기 버튼 클릭 핸들러 ======
+  const handleSave = async (e) => {
+    e.preventDefault(); // Link의 기본 이동 막기
+    if (loading) return;
+
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    // ★ 프로젝트에서 사용하는 토큰 키 이름에 맞춰 수정하면 됨
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      setErrorMsg("로그인 정보가 없습니다. 다시 로그인 해주세요.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await fetch("/api/users/me/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Bearer {JWT}
+        },
+        body: JSON.stringify({
+          name: name,
+          univ: univ,
+          major: major,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        // 명세서에 나온 에러 메시지 형식 반영
+        const msg =
+          data?.message ||
+          (res.status === 401
+            ? "인증 정보가 유효하지 않습니다."
+            : "입력 값의 형식이 올바르지 않습니다.");
+        setErrorMsg(msg);
+        return;
+      }
+
+      // 성공 메시지 (명세서 기본 메시지 사용)
+      setSuccessMsg(
+        data?.message || "이력 정보가 성공적으로 저장되었습니다."
+      );
+
+      // 저장 성공 시 Home으로 이동 (기존 Link 동작 유지)
+      navigate("/Home");
+    } catch (err) {
+      setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Header />
@@ -18,7 +87,11 @@ export default function PersonInfo() {
           {/* 이름 */}
           <Field>
             <Label>이름</Label>
-            <Input placeholder="이름" />
+            <Input
+              placeholder="이름"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
 
           {/* 아이디 */}
@@ -40,19 +113,33 @@ export default function PersonInfo() {
             </Label>
 
             <InputWrap>
-              <Input placeholder="학교 검색" />
+              <Input
+                placeholder="학교 검색"
+                value={univ}
+                onChange={(e) => setUniv(e.target.value)}
+              />
               <SearchIcon>🔍</SearchIcon>
             </InputWrap>
           </Field>
 
           {/* 전공 입력 */}
           <Field style={{ marginTop: "15px" }}>
-            <Input placeholder="전공 입력" />
+            <Input
+              placeholder="전공 입력"
+              value={major}
+              onChange={(e) => setMajor(e.target.value)}
+            />
           </Field>
 
-          {/* 저장하기 → /Home */}
+          {/* 에러 / 성공 메시지 */}
+          {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
+          {successMsg && <SuccessText>{successMsg}</SuccessText>}
+
+          {/* 저장하기 → /Home (API 호출 후 성공 시 이동) */}
           <ButtonLink to="/Home">
-            <SaveBtn>저장하기</SaveBtn>
+            <SaveBtn onClick={handleSave} disabled={loading}>
+              {loading ? "저장 중..." : "저장하기"}
+            </SaveBtn>
           </ButtonLink>
         </Card>
       </PageBody>
@@ -172,4 +259,25 @@ const SaveBtn = styled.button`
   &:active {
     transform: scale(0.98);
   }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: default;
+    transform: none;
+  }
+`;
+
+/* 에러 / 성공 메시지 */
+const ErrorText = styled.p`
+  margin-top: 16px;
+  margin-bottom: 0;
+  font-size: 13px;
+  color: #d93025;
+`;
+
+const SuccessText = styled.p`
+  margin-top: 16px;
+  margin-bottom: 0;
+  font-size: 13px;
+  color: #0b6f8a;
 `;
