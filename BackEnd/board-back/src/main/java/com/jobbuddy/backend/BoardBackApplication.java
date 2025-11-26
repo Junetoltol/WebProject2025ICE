@@ -1,4 +1,6 @@
-package com.webproject.board_back;
+/* 
+package com.jobbuddy.backend;
+//만든놈 최은준
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -7,14 +9,15 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(
         scanBasePackages = {
-                "com.webproject.board_back",
-                "com.jobbuddy"   // ✅ backend + util + 기타 전부 포함
+                "com.webproject.board_back", // 원래 보드 프로젝트
+                "com.jobbuddy.backend"       // ✅ JobBuddy 쪽 전부 스캔
         }
 )
 @EnableJpaRepositories(basePackages = "com.jobbuddy.backend.repository")
 @EntityScan(basePackages = "com.jobbuddy.backend.model")
 public class BoardBackApplication {
+
     public static void main(String[] args) {
         SpringApplication.run(BoardBackApplication.class, args);
     }
-}
+}*/

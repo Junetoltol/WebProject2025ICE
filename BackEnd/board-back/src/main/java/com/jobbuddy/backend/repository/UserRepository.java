@@ -1,6 +1,6 @@
-package com.jobbuddy.repository;
+package com.jobbuddy.backend.repository;
 
-import com.jobbuddy.model.User;
+import com.jobbuddy.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
