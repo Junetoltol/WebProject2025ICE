@@ -100,6 +100,7 @@ const Btn = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: 0.15s ease-out;
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
 
   &:hover {
     background: #04506d;

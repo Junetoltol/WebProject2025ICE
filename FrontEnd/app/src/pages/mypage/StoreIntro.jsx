@@ -59,6 +59,7 @@ const NewButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: 0.15s ease-out;
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
 
   &:hover {
     background: #04506d;
@@ -98,11 +99,7 @@ const DocThumbnail = styled.div`
 const Overlay = styled.div`
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(41, 198, 255, 0.4) 0%,
-    rgba(113, 189, 129, 0.4) 100%
-  );
+  background: linear-gradient(180deg, rgba(0, 103, 140, 0.40) 0%, rgba(0, 109, 148, 0.12) 100%), #FFF;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -129,6 +126,7 @@ const ActionButton = styled.button`
       ? "#00678C"
       : "#9E9E9E"};
   transition: background 0.2s;
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
 
   &:hover {
     background: ${({ variant }) =>

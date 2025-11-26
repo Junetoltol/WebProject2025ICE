@@ -19,11 +19,7 @@ const Main = styled.main`
 
   padding-top: ${HEADER_H}px; /* 고정 헤더만큼 아래로 밀기 */
 
-  background: linear-gradient(
-    180deg,
-    rgba(41, 198, 255, 0.25) 0%,
-    rgba(113, 189, 129, 0.25) 100%
-  );
+  
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -114,6 +110,7 @@ const Button = styled.button`
   font-size: 15px;
   cursor: pointer;
   transition: 0.15s;
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
   &:hover {
     background: #094e61;
   }

@@ -38,6 +38,7 @@ export default function IntroInfo() {
   const [skillIds, setSkillIds] = useState([0]);
   const [activityIds, setActivityIds] = useState([0]);
   const [awardIds, setAwardIds] = useState([0]);
+  const [skillLevel, setSkillLevel] = useState("기본");
 
   // 공통 add / remove
   const addId = (setter) =>
@@ -116,7 +117,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setCareerIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -167,7 +168,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setProjectIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -249,7 +250,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setCertIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -274,7 +275,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setLangIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -309,7 +310,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setSkillIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -324,9 +325,27 @@ export default function IntroInfo() {
                     <ComplexLabel>수준</ComplexLabel>
                     <ComplexInputCell>
                       <TagRow>
-                        <TagBtn type="button">기본</TagBtn>
-                        <TagBtn type="button">활용 가능</TagBtn>
-                        <TagBtn type="button">심화</TagBtn>
+                          <TagBtn
+                          type="button"
+                          $active={skillLevel === "기본"}
+                          onClick={() => setSkillLevel("기본")}
+                        >
+                          기본
+                        </TagBtn>
+                        <TagBtn
+                          type="button"
+                          $active={skillLevel === "활용 가능"}
+                          onClick={() => setSkillLevel("활용 가능")}
+                        >
+                          활용 가능
+                        </TagBtn>
+                        <TagBtn
+                          type="button"
+                          $active={skillLevel === "심화"}
+                          onClick={() => setSkillLevel("심화")}
+                        >
+                          심화
+                        </TagBtn>
                       </TagRow>
                     </ComplexInputCell>
                   </ComplexRow>
@@ -356,7 +375,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setActivityIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -408,7 +427,7 @@ export default function IntroInfo() {
                       type="button"
                       onClick={() => removeId(setAwardIds, id)}
                     >
-                      🗑
+                      <TrashSvg />
                     </DeleteBtn>
                   )}
 
@@ -515,6 +534,17 @@ const SmallPillBtn = styled.button`
   font-size: 11px;
   color: #555;
   cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: #e9e9e9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
 `;
 
 /* 기본 정보 입력 */
@@ -626,7 +656,7 @@ const WhiteCard = styled.div`
   border-radius: 18px;
   border: 1px solid #e3e3e3;
   background: #ffffff;
-  padding: 14px 16px 16px;
+  padding: 14px 44px 16px 16px; /* 오른쪽 패딩 ↑ : 삭제 버튼 공간 확보 */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -682,7 +712,6 @@ const DateInput = styled.input.attrs({ type: "date" })`
     border-color: #0f7f90;
   }
 
-  /* 크롬 기본 달력 아이콘 숨기기 */
   &::-webkit-calendar-picker-indicator {
     opacity: 0;
   }
@@ -729,40 +758,75 @@ function CalendarSvg() {
   );
 }
 
+/* 휴지통 SVG */
+
+function TrashSvg() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+  <path d="M2.5 10C2.5 10.2652 2.60536 10.5196 2.79289 10.7071C2.98043 10.8946 3.23478 11 3.5 11H8.5C8.76522 11 9.01957 10.8946 9.20711 10.7071C9.39464 10.5196 9.5 10.2652 9.5 10V4H10.5V3H8.5V2C8.5 1.73478 8.39464 1.48043 8.20711 1.29289C8.01957 1.10536 7.76522 1 7.5 1H4.5C4.23478 1 3.98043 1.10536 3.79289 1.29289C3.60536 1.48043 3.5 1.73478 3.5 2V3H1.5V4H2.5V10ZM4.5 2H7.5V3H4.5V2ZM4 4H8.5V10H3.5V4H4Z" fill="black"/>
+  <path d="M4.5 5H5.5V9H4.5V5ZM6.5 5H7.5V9H6.5V5Z" fill="black"/>
+</svg>
+  );
+}
+
+
 /* 삭제 버튼 */
 
 const DeleteBtn = styled.button`
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: 10px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   border: none;
   background: #f4f4f4;
-  font-size: 13px;
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: #ffecec;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  }
 `;
 
 /* 플러스 박스 */
 
 const PlusBox = styled.button`
   margin-top: 16px;
-  margin-bottom: 16px;   
+  margin-bottom: 16px;
   width: 100%;
-  height: 48px;          
-  border-radius: 16px;   
+  height: 48px;
+  border-radius: 16px;
   border: none;
   background: rgba(0, 109, 148, 0.25);
   box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
-  font-size: 24px;       
+  font-size: 24px;
   color: #ffffff;
   cursor: pointer;
-`;
 
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: rgba(0, 109, 148, 0.35);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.28);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.25);
+  }
+`;
 
 /* 기술 스택 태그 */
 
@@ -774,11 +838,27 @@ const TagRow = styled.div`
 const TagBtn = styled.button`
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid #dcdcdc;
-  background: #f8f8f8;
   font-size: 11px;
   cursor: pointer;
+
+  border: 1px solid ${({ $active }) => ($active ? "#0f7f90" : "#dcdcdc")};
+  background: ${({ $active }) => ($active ? "#0f7f90" : "#f8f8f8")};
+  color: ${({ $active }) => ($active ? "#ffffff" : "#333")};
+
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease,
+    border-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? "#0d6b82" : "#ececec")};
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+  }
 `;
+
 
 /* 하단 버튼 */
 
@@ -798,20 +878,39 @@ const BaseBottomBtn = styled.button`
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 `;
 
 const BottomGrayBtn = styled(BaseBottomBtn)`
-  border-radius: 12px;
-  color:#ffffff;
+  color: #ffffff;
   border: 1px solid #737171;
   background: #737171;
   box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
-  `;
+
+  &:hover {
+    background: #5f5f5f;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
+  }
+`;
 
 const BottomBlueBtn = styled(BaseBottomBtn)`
-  border-radius: 12px;
   border: 1px solid #737171;
-  background: #00678C;
+  background: #00678c;
   box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
   color: #ffffff;
+
+  &:hover {
+    background: #005574;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
+  }
 `;

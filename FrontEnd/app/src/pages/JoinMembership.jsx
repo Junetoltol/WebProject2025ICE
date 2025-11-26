@@ -1,64 +1,54 @@
+// src/pages/JoinMembership.jsx
 import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
-import Header from "../components/Header";
+import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
 
+/* 전역 변수 (색/간격 통일) */
 const Global = createGlobalStyle`
   :root{
-    /* 🔢 전부 px로 고정 */
     --gap-header-card: 90px;      /* 헤더 아래 ~ 카드 위 */
     --gap-input: 25px;            /* 각 입력 그룹 사이 */
-    --gap-btn-bottom: 0px;       /* 가입 버튼 ~ 로그인 라인 */
-    --gap-page-bottom: 64px;      /* 카드 아래 여백 */
+    --gap-btn-bottom: 0px;        /* 가입 버튼 ~ 로그인 라인 */
+    --gap-page-bottom: 120px;     /* 카드 아래 여백 */
 
     --card-w: 540px;
-    --card-h: 780px;
 
-    --card-p: 40px;               /* 카드 패딩 */
-    --card-pt: 40px;
-    --card-px: 40px;
-    --card-pb: 40px;
-
-    --title-top: 16px;            /* 카드 내부에서 제목 위쪽 여백 */
-    --radius: 20px;
-
-    --primary: var(--jb-primary, #0f7f90);
-    --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
+    --primary: var(--jb-primary, #00678c);
+    --primary-hover: color-mix(in oklab, var(--primary) 85%, black);
+    --primary-pressed: color-mix(in oklab, var(--primary) 80%, black);
   }
 `;
 
-const Layer = styled.div`
+/* 페이지 레이아웃: 헤더 높이 + 90px 만큼 띄우기 */
+const PageBody = styled.main`
   position: relative;
-  z-index: 1;
-  min-height: 100vh;
+  z-index: 10;
+  min-height: calc(100vh - ${HEADER_H}px);
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: center;
+  padding-top: calc(${HEADER_H}px + var(--gap-header-card));
+  padding-bottom: var(--gap-page-bottom);
 `;
 
-const Card = styled.div`
-  margin-top: var(--gap-header-card);
-  margin-bottom: var(--gap-page-bottom);
+/* 중앙 카드 (개인정보 수정이랑 통일) */
+const Card = styled.section`
   width: var(--card-w);
-  height: var(--card-h);
-  flex-shrink: 0;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  padding: 40px 56px 48px;
   box-sizing: border-box;
-
-  background: #fff;
-  border-radius: var(--radius);
-  padding: var(--card-pt) var(--card-px) var(--card-pb);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
   display: flex;
   flex-direction: column;
   gap: var(--gap-input);
 `;
 
-
 const Title = styled.h2`
-  margin: var(--title-top) 0 25px 0;
+  margin: 0 0 32px;
   text-align: center;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
 `;
 
@@ -70,55 +60,75 @@ const Group = styled.div`
 
 const Label = styled.label`
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
 `;
 
-const Row = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: center;
-`;
-
+/* 인풋 공통 스타일 (포커스 시 테두리 색/두께 느낌 통일) */
 const Input = styled.input`
   flex: 1;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
+  padding: 12px 14px;
   font-size: 14px;
-  background: #fff;
-`;
+  box-sizing: border-box;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
-const Btn = styled.button`
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  &:active {
-    background: var(--primary-pressed);
+  &::placeholder {
+    color: #b5b5b5;
+  }
+
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(0, 103, 140, 0.18);
   }
 `;
 
-const JoinBtn = styled(Btn)`
+/* 버튼 공통 – hover/active + 그림자 */
+const BtnBase = styled.button`
+  width: 100%;
+  border: none;
   border-radius: 12px;
-  padding: 14px;
-  margin-top: var(--gap-input);
+  background: var(--primary);
+  color: #ffffff;
   font-size: 16px;
   font-weight: 600;
+  padding: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    background: var(--primary-pressed);
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
+  }
 `;
 
+/* 가입 버튼 */
+const JoinBtn = styled(BtnBase)`
+  margin-top: var(--gap-input);
+`;
+
+/* 로그인 라인 */
 const LoginLine = styled.div`
   text-align: center;
   margin-top: var(--gap-btn-bottom);
   font-size: 14px;
+
   a {
     color: var(--primary);
     font-weight: 600;
     text-decoration: none;
     margin-left: 4px;
   }
+
   a:hover {
     text-decoration: underline;
   }
@@ -141,7 +151,11 @@ export default function JoinMembership() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.userId.trim() || !formData.password.trim() || !formData.name.trim()) {
+    if (
+      !formData.userId.trim() ||
+      !formData.password.trim() ||
+      !formData.name.trim()
+    ) {
       alert("아이디, 비밀번호, 이름은 필수 입력 항목입니다.");
       return;
     }
@@ -152,9 +166,10 @@ export default function JoinMembership() {
   return (
     <>
       <Global />
-      <Background style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }} />
+      <Background />
       <Header />
-      <Layer>
+
+      <PageBody>
         <Card as="form" onSubmit={handleSubmit}>
           <Title>회원가입</Title>
 
@@ -218,7 +233,7 @@ export default function JoinMembership() {
             계정이 있으신가요? <a href="/login">로그인</a>
           </LoginLine>
         </Card>
-      </Layer>
+      </PageBody>
     </>
   );
 }
