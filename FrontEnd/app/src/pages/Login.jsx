@@ -5,6 +5,9 @@ import styled, { createGlobalStyle } from "styled-components";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
 
+// 🔹 새로 추가: 분리한 API 함수 import
+import { login } from "../api/auth";
+
 const Global = createGlobalStyle`
   /* 레이아웃 기본값 초기화 (위쪽 여백 방지) */
   html, body, #root { height: 100%; margin: 0; padding: 0; }
@@ -32,8 +35,6 @@ const Global = createGlobalStyle`
   }
 `;
 
-const BACKEND_BASE_URL = "http://localhost:8080"; // ✅ 백엔드 주소/포트에 맞게 수정해서 사용
-
 export default function Login() {
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
@@ -49,44 +50,14 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // 🟢 백엔드에서 기대하는 필드명: username / password
-        body: JSON.stringify({
-          username: id,
-          password: pw,
-        }),
-      });
+      // 🔹 API 분리: 실제 요청/토큰 저장은 api/auth.js의 login()이 담당
+      const { message } = await login(id, pw);
 
-      const json = await res.json().catch(() => null);
-
-      if (res.ok && json) {
-        const { status, message, data } = json;
-
-        if (status === 200 && data) {
-          const { tokenType, accessToken } = data;
-
-          // 🔐 토큰 저장 (나중에 Authorization 헤더에 사용)
-          const authToken = `${tokenType} ${accessToken}`; // "Bearer xxxxxx"
-          localStorage.setItem("authToken", authToken);
-
-          alert(message || "로그인에 성공했습니다.");
-
-          // ✅ 로그인 성공 후 이동할 페이지 (원하는 경로로 바꿔도 됨)
-          navigate("/");
-        } else {
-          alert(message || "로그인에 실패했습니다.");
-        }
-      } else {
-        const msg = json?.message || "아이디 또는 비밀번호가 일치하지 않습니다.";
-        alert(msg);
-      }
+      alert(message || "로그인에 성공했습니다.");
+      navigate("/"); // 성공 후 이동 경로
     } catch (err) {
       console.error(err);
-      alert("서버와 통신 중 오류가 발생했습니다.");
+      alert(err.message || "로그인에 실패했습니다.");
     } finally {
       setLoading(false);
     }
