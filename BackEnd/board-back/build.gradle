@@ -55,4 +55,3 @@ tasks.named('test') {
 tasks.named('bootRun', org.springframework.boot.gradle.tasks.run.BootRun) {
     mainClass.set("com.webproject.board_back.BoardBackApplication")
 }
-
