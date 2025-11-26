@@ -1,9 +1,34 @@
 // src/pages/modify/PersonInfo.jsx
-import React, { useState } from "react";
-import styled from "styled-components";
-import { Link, useNavigate } from "react-router-dom"; // ★ useNavigate 추가
-import Header from "../../components/Header";
+import React from "react";
+import styled, { createGlobalStyle } from "styled-components";
+import { Link } from "react-router-dom";
+import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
+
+/* 전역 색상 변수 (다른 페이지와 공통) */
+const Global = createGlobalStyle`
+  :root {
+    --primary: #00678c;
+    --primary-hover: color-mix(in oklab, var(--primary) 85%, black);
+    --primary-pressed: color-mix(in oklab, var(--primary) 80%, black);
+  }
+`;
+
+/* 돋보기 아이콘 */
+const SearchSvg = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="14"
+    height="14"
+    viewBox="0 0 14 14"
+    fill="none"
+  >
+    <path
+      d="M5.62119 11.2418C6.86837 11.2415 8.07962 10.824 9.06206 10.0558L12.1509 13.1444L13.1444 12.151L10.0556 9.06227C10.8243 8.07979 11.2421 6.86833 11.2424 5.62089C11.2424 2.52167 8.72057 0 5.62119 0C2.52181 0 0 2.52167 0 5.62089C0 8.7201 2.52181 11.2418 5.62119 11.2418ZM5.62119 1.40522C7.94625 1.40522 9.83708 3.29595 9.83708 5.62089C9.83708 7.94583 7.94625 9.83655 5.62119 9.83655C3.29612 9.83655 1.4053 7.94583 1.4053 5.62089C1.4053 3.29595 3.29612 1.40522 5.62119 1.40522Z"
+      fill="#737171"
+    />
+  </svg>
+);
 
 export default function PersonInfo() {
   // ====== 상태 관리 (이름 / 학교 / 전공 + 에러/성공 메시지) ======
@@ -77,8 +102,9 @@ export default function PersonInfo() {
 
   return (
     <>
-      <Header />
+      <Global />
       <Background />
+      <Header />
 
       <PageBody>
         <Card>
@@ -95,51 +121,39 @@ export default function PersonInfo() {
           </Field>
 
           {/* 아이디 */}
-          <Field style={{ marginTop: "25px" }}>
+          <Field style={{ marginTop: 25 }}>
             <Label>아이디</Label>
             <Input placeholder="아이디" disabled />
           </Field>
 
-          {/* 비밀번호 변경하기 → /modify/Password */}
+          {/* 비밀번호 변경하기 (회색 버튼) */}
           <ButtonLink to="/modify/Password">
-            <PasswordBtn>비밀번호 변경하기</PasswordBtn>
+            <GreyBtn type="button">비밀번호 변경하기</GreyBtn>
           </ButtonLink>
 
           {/* 학력 */}
-          <Field style={{ marginTop: "25px" }}>
-            <Label>
-              학력
-              <SubText>자기소개서 작성 시 활용합니다.</SubText>
-            </Label>
+          <Field style={{ marginTop: 26 }}>
+            <LabelRow>
+              <Label>학력</Label>
+              <SubText>자기소개서 작성 시 활용됩니다.</SubText>
+            </LabelRow>
 
             <InputWrap>
-              <Input
-                placeholder="학교 검색"
-                value={univ}
-                onChange={(e) => setUniv(e.target.value)}
-              />
-              <SearchIcon>🔍</SearchIcon>
+              <Input placeholder="학교 검색" style={{ paddingRight: 38 }} />
+              <SearchIcon type="button">
+                <SearchSvg />
+              </SearchIcon>
             </InputWrap>
           </Field>
 
-          {/* 전공 입력 */}
-          <Field style={{ marginTop: "15px" }}>
-            <Input
-              placeholder="전공 입력"
-              value={major}
-              onChange={(e) => setMajor(e.target.value)}
-            />
+          {/* 전공 */}
+          <Field style={{ marginTop: 14 }}>
+            <Input placeholder="전공 입력" />
           </Field>
 
-          {/* 에러 / 성공 메시지 */}
-          {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
-          {successMsg && <SuccessText>{successMsg}</SuccessText>}
-
-          {/* 저장하기 → /Home (API 호출 후 성공 시 이동) */}
+          {/* 저장하기 (파란 버튼 – 로그인/회원가입과 동일 스타일) */}
           <ButtonLink to="/Home">
-            <SaveBtn onClick={handleSave} disabled={loading}>
-              {loading ? "저장 중..." : "저장하기"}
-            </SaveBtn>
+            <SaveBtn type="button">저장하기</SaveBtn>
           </ButtonLink>
         </Card>
       </PageBody>
@@ -147,117 +161,161 @@ export default function PersonInfo() {
   );
 }
 
-/* ================= Styled Components ================= */
+/* ===== 레이아웃 / 카드 ===== */
 
-const PageBody = styled.div`
-  width: 100%;
+const PageBody = styled.main`
+  position: relative;
+  z-index: 10;
+  min-height: calc(100vh - ${HEADER_H}px);
   display: flex;
   justify-content: center;
-  margin-top: 90px; /* 헤더와 카드 사이 90px */
-  position: relative;
-  z-index: 1;
-  padding-bottom: 80px;
+  padding-top: calc(${HEADER_H}px + 90px); /* 헤더에서 90px 아래 */
+  padding-bottom: 120px;
 `;
 
-const Card = styled.div`
-  width: 540px; /* 흰 박스 너비 고정 */
+const Card = styled.section`
+  width: 540px; /* 로그인 / 회원가입과 동일 */
+  border-radius: 24px;
   background: #ffffff;
-  border-radius: 16px;
-  padding: 40px 48px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  position: relative;
-  z-index: 2;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  padding: 40px 56px 48px;
+  box-sizing: border-box;
 `;
 
 const Title = styled.h2`
   text-align: center;
-  margin: 0 0 35px;
-  font-weight: 700;
+  margin: 0 0 32px;
   font-size: 22px;
+  font-weight: 700;
 `;
+
+/* ===== 필드 / 라벨 ===== */
 
 const Field = styled.div`
   width: 100%;
 `;
 
-const Label = styled.div`
-  font-size: 15px;
-  margin-bottom: 8px;
+const LabelRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+`;
+
+const Label = styled.span`
+  font-size: 14px;
   font-weight: 600;
 `;
 
 const SubText = styled.span`
-  margin-left: 6px;
-  font-size: 12px;
-  color: #777777;
-  font-weight: 400;
+  font-size: 11px;
+  color: #777;
 `;
 
-/* input들은 전부 카드 내부 폭 기준 95% (오른쪽 여백 조금 남김) */
+/* ===== 인풋 공통 (로그인/회원가입과 통일) ===== */
+
 const Input = styled.input`
-  width: 95%;
-  height: 42px;
-  border-radius: 8px;
+  width: 100%;
+  height: 44px; /* 로그인/회원가입 인풋 높이와 동일 */
+  border-radius: 10px;
   border: 1px solid #dcdcdc;
-  padding: 0 12px;
-  font-size: 15px;
-  outline: none;
+  padding: 0 14px;
+  font-size: 14px;
+  box-sizing: border-box;
   background: ${(props) => (props.disabled ? "#f2f2f2" : "#ffffff")};
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: #b5b5b5;
+  }
 
   &:focus {
-    border-color: #0f7f90;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(0, 103, 140, 0.18);
   }
 `;
 
-/* 버튼을 감싸는 Link (버튼 크기 그대로, 링크 스타일 제거) */
+/* 학교 검색 인풋 + 돋보기 */
+
+const InputWrap = styled.div`
+  position: relative;
+  width: 100%;
+  margin-top: 6px;
+`;
+
+const SearchIcon = styled.button`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+`;
+
+/* ===== 버튼 공통 스타일 (로그인/회원가입과 느낌 통일) ===== */
+
 const ButtonLink = styled(Link)`
   display: block;
   width: 100%;
   text-decoration: none;
 `;
 
-/* 비밀번호 변경 버튼 */
-const PasswordBtn = styled.button`
+/* 회색 버튼 (비밀번호 변경하기) – 크기/폰트는 SaveBtn과 동일하게 맞춤 */
+const GreyBtn = styled.button`
   width: 100%;
-  height: 40px;
+  height: 44px;
   margin-top: 18px;
-  border-radius: 6px;
+  border-radius: 12px;
   background: #6f6f6f;
   color: #ffffff;
   border: none;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
+
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: #555555;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    background: #444444;
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
+  }
 `;
 
-/* 검색 박스(돋보기 포함) */
-const InputWrap = styled.div`
-  width: 100%;
-  position: relative;
-`;
+/* 파란 버튼 (저장하기) – 로그인/회원가입 버튼과 동일 스타일 */
 
-const SearchIcon = styled.span`
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-`;
-
-/* 저장하기 버튼 */
 const SaveBtn = styled.button`
   width: 100%;
   height: 44px;
-  margin-top: 35px;
-  background: #0b6f8a;
+  margin-top: 32px;
+  border-radius: 12px;
+  background: var(--primary);
   color: #ffffff;
   border: none;
-  font-size: 15px;
-  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  font-weight: 600;
+
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
 
   &:active {
-    transform: scale(0.98);
+    background: var(--primary-pressed);
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
   }
 
   &:disabled {
