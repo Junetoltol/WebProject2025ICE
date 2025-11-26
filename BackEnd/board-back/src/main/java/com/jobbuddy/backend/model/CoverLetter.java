@@ -1,5 +1,5 @@
 package com.jobbuddy.backend.model;
-//만든놈 최은준
+// 만든놈 최은준
 
 import jakarta.persistence.*;
 
@@ -63,14 +63,12 @@ public class CoverLetter {
     private String templateId;
 
     // 상세 섹션 정보 (JSON 타입)
-    // build.gradle에 hibernate-core 의존성이 있으므로 사용 가능
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(columnDefinition = "json")
     private Map<String, Object> sections;
 
     // ----------------- 생성자 & 콜백 -----------------
 
-    // JPA 기본 생성자 (서비스에서도 사용하니까 public)
     public CoverLetter() {
     }
 
@@ -119,7 +117,9 @@ public class CoverLetter {
     public String getTargetCompany() { return targetCompany; }
     public String getTargetJob() { return targetJob; }
     public String getTemplateId() { return templateId; }
+
     public Map<String, Object> getSections() { return sections; }
+    public void setSections(Map<String, Object> sections) { this.sections = sections; }
 
     // ----------------- 비즈니스 로직 메서드 -----------------
 
@@ -132,7 +132,7 @@ public class CoverLetter {
         this.targetCompany = targetCompany;
         this.targetJob = targetJob;
         this.sections = sections;
-        this.onUpdate(); // 시간 갱신
+        this.onUpdate();
     }
 
     // 제목만 변경 (이름 변경 API용)
