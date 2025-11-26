@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import { useNavigate } from "react-router-dom";   // 🔥 추가
 import Header from "../../components/Header";
 
 const Wrap = styled.div`
@@ -80,7 +81,7 @@ const DocCard = styled.div`
 
 const DocThumbnail = styled.div`
   width: 150px;
-  height: 210px; /* A4 비율 */
+  height: 210px;
   background: #ffffff;
   border-radius: 4px;
   box-shadow: 0 9px 18px rgba(0, 96, 140, 0.28);
@@ -88,7 +89,6 @@ const DocThumbnail = styled.div`
   position: relative;
   overflow: hidden;
 
-  /* hover 시 버튼 영역 표시 */
   &:hover div.overlay {
     opacity: 1;
     pointer-events: all;
@@ -152,6 +152,8 @@ const DocDate = styled.div`
 `;
 
 export default function StoreIntro() {
+  const navigate = useNavigate();   // 🔥 추가
+
   const docs = [
     { id: 1, title: "새문서 1", modified: "2025.01.01" },
     { id: 2, title: "새문서 2", modified: "2025.01.03" },
@@ -169,7 +171,11 @@ export default function StoreIntro() {
                 <Title>ooo 님의 자소서 보관함</Title>
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
-              <NewButton>새 자소서 작성하기</NewButton>
+
+              {/* 🔥 이동 기능 추가된 부분 */}
+              <NewButton onClick={() => navigate("/self-intro/Info")}>
+                새 자소서 작성하기
+              </NewButton>
             </BoxHeader>
 
             <CardRow>
@@ -182,6 +188,7 @@ export default function StoreIntro() {
                       <ActionButton variant="delete">삭제하기</ActionButton>
                     </Overlay>
                   </DocThumbnail>
+
                   <DocName>{doc.title}</DocName>
                   <DocDate>수정일자: {doc.modified}</DocDate>
                 </DocCard>
