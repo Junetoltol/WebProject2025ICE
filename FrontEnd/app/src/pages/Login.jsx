@@ -4,10 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import styled, { createGlobalStyle } from "styled-components";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
-
-// 🔹 새로 추가: 분리한 API 함수 import
-// ../api/auth에서는 예를 들어 이런 식으로 구현돼 있다고 가정:
-// export async function login({ username, password }) { ... }
 import { login } from "../api/auth";
 
 /* 전역 레이아웃 & 색상 변수 */
@@ -43,26 +39,15 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // 🟢 분리한 API 함수만 사용
-      // ../api/auth.js 에서 login({ username, password })가
-      // JSON( { status, message, data } )을 반환한다고 가정
-      const json = await login({ username: id, password: pw });
+      // 🔹 auth.js 에서 토큰 저장까지 이미 처리함
+      const { status, message } = await login({
+        username: id,
+        password: pw,
+      });
 
-      if (!json) {
-        throw new Error("서버 응답이 없습니다.");
-      }
-
-      const { status, message, data } = json;
-
-      if (status === 200 && data) {
-        const { tokenType, accessToken } = data;
-
-        // 🔐 토큰 저장 (나중에 Authorization 헤더에 사용)
-        const authToken = `${tokenType} ${accessToken}`; // "Bearer xxxxxx"
-        localStorage.setItem("authToken", authToken);
-
+      if (status === 200) {
         alert(message || "로그인에 성공했습니다.");
-        navigate("/"); // 로그인 성공 후 이동할 페이지
+        navigate("/"); // 로그인 성공 후 이동
       } else {
         alert(message || "아이디 또는 비밀번호가 일치하지 않습니다.");
       }
@@ -82,7 +67,6 @@ export default function Login() {
 
       <PageBody>
         <Card role="region" aria-label="로그인 카드">
-          {/* 로고 텍스트 */}
           <LogoTitle aria-label="Job Buddy">
             <Accent>J</Accent>
             <Rest>ob </Rest>
@@ -139,7 +123,7 @@ const PageBody = styled.main`
   min-height: calc(100vh - ${HEADER_H}px);
   display: flex;
   justify-content: center;
-  padding-top: calc(${HEADER_H}px + var(--gap-header-card)); /* 헤더 + 90px */
+  padding-top: calc(${HEADER_H}px + var(--gap-header-card));
   padding-bottom: var(--gap-page-bottom);
 `;
 

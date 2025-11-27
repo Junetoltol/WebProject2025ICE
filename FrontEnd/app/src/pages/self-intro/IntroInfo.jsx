@@ -4,7 +4,8 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
-import { createCoverLetterDraft } from "../../api/selfIntro"; // 🔹 추가
+import { createCoverLetterDraft } from "../../api/selfIntro"; // 자소서 초안 API
+import { createResumeDraft, updateResumeDraft } from "../../api/resume"; // 🔹 이력서 초안 API 추가
 
 // 달력 아이콘이 붙은 단일 date input
 function DateInputWithIcon({ placeholder }) {
@@ -38,6 +39,10 @@ export default function IntroInfo() {
 
   // ✅ 임시 저장 후 받은 coverLetterId 보관
   const [coverLetterId, setCoverLetterId] = useState(null);
+
+  // ✅ 이력서 초안용 resumeId
+  const [resumeId, setResumeId] = useState(null);
+
   const [saving, setSaving] = useState(false);
 
   // 각 섹션별 카드 ID 배열 (UI 렌더링용)
@@ -57,7 +62,7 @@ export default function IntroInfo() {
   const removeId = (setter, id) =>
     setter((prev) => prev.filter((x) => x !== id));
 
-  // 🔹 임시 저장 → POST /api/cover-letters
+  // 🔹 임시 저장 → 자소서 초안 + 이력서 초안 함께 저장
   const handleTempSave = async () => {
     if (!title.trim()) {
       alert("자기소개서 제목을 입력해 주세요.");
@@ -74,7 +79,8 @@ export default function IntroInfo() {
       }
     }
 
-    const payload = {
+    // ---- 1) 자기소개서 초안 payload (기존) ----
+    const coverLetterPayload = {
       title: title || "",
       targetCompany: targetCompany || "",
       targetJob: targetJob || "",
@@ -88,13 +94,69 @@ export default function IntroInfo() {
       },
     };
 
+    // ---- 2) 이력서 초안 payload (API 명세서 형태) ----
+    // 지금은 UI가 아직 상태랑 안 묶여 있으니까,
+    // 명세에 맞는 기본 뼈대만 보내두고 나중에 값 채우면 됨.
+    const experienceList = []; // 경력/인턴/알바 데이터를 여기에 push 예정
+    const projectList = []; // 프로젝트 경험
+    const certList = []; // 자격증
+    const skillList = []; // 기술 스택
+    const clubList = []; // 교내/대외 활동
+    const awardList = []; // 수상 / 연구 성과
+
+    const resumePayload = {
+      // ✅ profile은 필수라서 기본 구조만이라도 채워서 보냄
+      profile: {
+        name: "", // TODO: /users/me/profile 이랑 연동해서 채우기
+        phone: "",
+        email: "",
+        address: "",
+        university: {
+          name: "",
+          major: "",
+        },
+      },
+
+      // 명세 JSON 예시에 맞춰서 작성
+      // (experience vs experiences, club vs clubs 둘 다 넣어줌)
+      experience: experienceList,
+      experiences: experienceList,
+
+      projects: projectList,
+      certifications: certList,
+
+      skills: skillList,
+
+      club: clubList,
+      clubs: clubList,
+
+      awards: awardList,
+    };
+
     try {
       setSaving(true);
-      const result = await createCoverLetterDraft(payload);
-      // result.data = { coverLetterId: 1234 }
-      const newId = result.data.coverLetterId;
-      setCoverLetterId(newId);
-      alert("임시 저장되었습니다.");
+
+      // 1) 자기소개서 초안 저장 (기존 로직)
+      const coverResult = await createCoverLetterDraft(coverLetterPayload);
+      const newCoverId = coverResult.data?.coverLetterId;
+      setCoverLetterId(newCoverId);
+
+      // 2) 이력서 초안 저장 / 수정
+      let newResumeId = resumeId;
+
+      if (!resumeId) {
+        // 아직 이력서 초안이 없다면 -> POST /api/resumes
+        const resumeResult = await createResumeDraft(resumePayload);
+        newResumeId = resumeResult.data?.resumeId;
+      } else {
+        // 이미 한 번 만든 초안이 있으면 -> PATCH /api/resumes/{resumeId}
+        const resumeResult = await updateResumeDraft(resumeId, resumePayload);
+        newResumeId = resumeResult.data?.resumeId || resumeId;
+      }
+
+      setResumeId(newResumeId);
+
+      alert("자기소개서 · 이력서 초안이 임시 저장되었습니다.");
     } catch (err) {
       console.error(err);
       alert(err.message || "임시 저장 중 오류가 발생했습니다.");
@@ -397,7 +459,7 @@ export default function IntroInfo() {
                     <ComplexLabel>수준</ComplexLabel>
                     <ComplexInputCell>
                       <TagRow>
-                          <TagBtn
+                        <TagBtn
                           type="button"
                           $active={skillLevel === "기본"}
                           onClick={() => setSkillLevel("기본")}
@@ -530,7 +592,11 @@ export default function IntroInfo() {
 
           {/* 하단 버튼 */}
           <BottomButtonRow>
-            <BottomGrayBtn type="button" onClick={handleTempSave} disabled={saving}>
+            <BottomGrayBtn
+              type="button"
+              onClick={handleTempSave}
+              disabled={saving}
+            >
               {saving ? "저장 중..." : "임시 저장"}
             </BottomGrayBtn>
             <BottomBlueBtn type="button" onClick={handleNext}>
@@ -834,13 +900,21 @@ function CalendarSvg() {
 
 function TrashSvg() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-  <path d="M2.5 10C2.5 10.2652 2.60536 10.5196 2.79289 10.7071C2.98043 10.8946 3.23478 11 3.5 11H8.5C8.76522 11 9.01957 10.8946 9.20711 10.7071C9.39464 10.5196 9.5 10.2652 9.5 10V4H10.5V3H8.5V2C8.5 1.73478 8.39464 1.48043 8.20711 1.29289C8.01957 1.10536 7.76522 1 7.5 1H4.5C4.23478 1 3.98043 1.10536 3.79289 1.29289C3.60536 1.48043 3.5 1.73478 3.5 2V3H1.5V4H2.5V10ZM4.5 2H7.5V3H4.5V2ZM4 4H8.5V10H3.5V4H4Z" fill="black"/>
-  <path d="M4.5 5H5.5V9H4.5V5ZM6.5 5H7.5V9H6.5V5Z" fill="black"/>
-</svg>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+    >
+      <path
+        d="M2.5 10C2.5 10.2652 2.60536 10.5196 2.79289 10.7071C2.98043 10.8946 3.23478 11 3.5 11H8.5C8.76522 11 9.01957 10.8946 9.20711 10.7071C9.39464 10.5196 9.5 10.2652 9.5 10V4H10.5V3H8.5V2C8.5 1.73478 8.39464 1.48043 8.20711 1.29289C8.01957 1.10536 7.76522 1 7.5 1H4.5C4.23478 1 3.98043 1.10536 3.79289 1.29289C3.60536 1.48043 3.5 1.73478 3.5 2V3H1.5V4H2.5V10ZM4.5 2H7.5V3H4.5V2ZM4 4H8.5V10H3.5V4H4Z"
+        fill="black"
+      />
+      <path d="M4.5 5H5.5V9H4.5V5ZM6.5 5H7.5V9H6.5V5Z" fill="black" />
+    </svg>
   );
 }
-
 
 /* 삭제 버튼 */
 
