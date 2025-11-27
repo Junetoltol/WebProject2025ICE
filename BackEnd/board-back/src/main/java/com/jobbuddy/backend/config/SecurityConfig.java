@@ -43,6 +43,7 @@ public class SecurityConfig {
 
                         // 🔽 자소서 API는 일단 전부 허용 (개발용)
                         .requestMatchers("/api/cover-letters/**").permitAll()
+                        .requestMatchers("/api/users/me/profile").permitAll()
 
                         // 나머지는 토큰 필수
                         .anyRequest().authenticated())

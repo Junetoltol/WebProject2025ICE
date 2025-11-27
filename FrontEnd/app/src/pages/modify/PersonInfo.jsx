@@ -4,6 +4,8 @@ import styled, { createGlobalStyle } from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
+import { updateUserProfile } from "../../api/userApi";
+import { isLoggedIn } from "../../api/auth";
 
 /* 전역 색상 변수 (다른 페이지와 공통) */
 const Global = createGlobalStyle`
@@ -31,7 +33,6 @@ const SearchSvg = () => (
 );
 
 export default function PersonInfo() {
-
   // ====== 상태 관리 (이름 / 학교 / 전공 + 에러/성공 메시지) ======
   const [name, setName] = useState("");
   const [univ, setUniv] = useState("");
@@ -49,53 +50,45 @@ export default function PersonInfo() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    // 🔐 로그인 시 localStorage에 저장한 토큰 키와 맞추기 (Login.jsx: authToken)
-    const token = localStorage.getItem("authToken");
-
-    if (!token) {
+    // 🔐 로그인 여부 확인
+    if (!isLoggedIn()) {
       setErrorMsg("로그인 정보가 없습니다. 다시 로그인 해주세요.");
+      navigate("/login");
+      return;
+    }
+
+    // 간단한 유효성 검사 (이름 정도만 필수로)
+    if (!name.trim()) {
+      setErrorMsg("이름을 입력해주세요.");
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await fetch("/api/users/me/profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          // Login에서 이미 "Bearer xxx" 형태로 저장했으므로 그대로 사용
-          Authorization: token,
-        },
-        body: JSON.stringify({
-          name,
-          univ,
-          major,
-        }),
+      // 🔥 분리한 API 함수 호출 (토큰은 userApi/updateUserProfile 안에서 getAuthHeader로 자동 처리)
+      const res = await updateUserProfile({
+        name,
+        univ,
+        major,
       });
 
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        const msg =
-          data?.message ||
-          (res.status === 401
-            ? "인증 정보가 유효하지 않습니다."
-            : "입력 값의 형식이 올바르지 않습니다.");
-        setErrorMsg(msg);
-        return;
-      }
-
-      // 성공 메시지 (명세서 기본 메시지 사용)
+      // 성공 메시지 (명세 기본 메시지 사용)
       setSuccessMsg(
-        data?.message || "이력 정보가 성공적으로 저장되었습니다."
+        res?.message || "이력 정보가 성공적으로 저장되었습니다."
       );
 
-      // 잠깐 메시지 보여준 뒤 이동하고 싶으면 setTimeout 써도 됨
-      navigate("/");
+      // 필요하면 잠시 후 페이지 이동
+      // navigate("/");
     } catch (err) {
       console.error(err);
-      setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
+      if (err.data?.message) {
+        setErrorMsg(err.data.message);
+      } else if (err.message) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
+      }
     } finally {
       setLoading(false);
     }
@@ -114,7 +107,11 @@ export default function PersonInfo() {
           {/* 이름 */}
           <Field>
             <Label>이름</Label>
-            <Input placeholder="이름" />
+            <Input
+              placeholder="이름"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
 
           {/* 아이디 (백엔드 연동 전이라 비활성화 인풋만 두기) */}
@@ -300,6 +297,20 @@ const GreyBtn = styled.button`
   }
 `;
 
+/* 에러/성공 메시지 */
+
+const ErrorText = styled.p`
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #e74c3c;
+`;
+
+const SuccessText = styled.p`
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #2ecc71;
+`;
+
 /* 파란 버튼 (저장하기) – 로그인/회원가입 버튼과 동일 스타일 */
 
 const SaveBtn = styled.button`
@@ -326,5 +337,11 @@ const SaveBtn = styled.button`
     background: var(--primary-pressed);
     transform: translateY(1px);
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: default;
+    box-shadow: none;
   }
 `;

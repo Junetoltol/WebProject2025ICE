@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
 import { changePassword } from "../../api/userApi";
+import { isLoggedIn } from "../../api/auth";
 
 /* 글로벌 색상 (다른 페이지와 통일) */
 const Global = createGlobalStyle`
@@ -67,21 +68,20 @@ export default function Password() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validate()) return;
+    if (!validate()) return;
 
-  try {
-    const token =
-      localStorage.getItem("accessToken") || localStorage.getItem("token");
-    const username =
-      localStorage.getItem("username") || localStorage.getItem("userId");
-
-    if (!token) {
+    // 🔐 로그인 여부 확인
+    if (!isLoggedIn()) {
       alert("로그인 정보가 없습니다. 다시 로그인해주세요.");
       navigate("/login");
       return;
     }
+
+    // username은 로그인 시 localStorage에 저장했다고 가정
+    const username =
+      localStorage.getItem("username") || localStorage.getItem("userId");
 
     if (!username) {
       alert("사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.");
@@ -89,33 +89,34 @@ export default function Password() {
       return;
     }
 
-    // 🔥 분리한 API 함수 호출
-    const data = await changePassword({
-      token,
-      username,
-      currentPassword,
-      newPassword,
-      confirmPassword,
-    });
+    try {
+      // 🔥 분리한 API 함수 호출 (토큰은 userApi/changePassword 안에서 getAuthHeader로 자동 처리)
+      const data = await changePassword({
+        username,
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
 
-    alert(data?.message || "비밀번호가 성공적으로 변경되었습니다.");
+      alert(data?.message || "비밀번호가 성공적으로 변경되었습니다.");
 
-    // 폼 초기화 & 페이지 이동
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    navigate("/modify/PersonInfo");
-  } catch (err) {
-    console.error(err);
-    if (err.data?.message) {
-      // 예: "비밀번호가 틀렸습니다.", "비밀번호가 일치하지 않습니다." 등
-      alert(err.data.message);
-    } else {
-      alert("비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.");
+      // 폼 초기화 & 페이지 이동
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      navigate("/modify/PersonInfo");
+    } catch (err) {
+      console.error(err);
+      // userApi.js에서 던진 error.data?.message 우선 사용
+      if (err.data?.message) {
+        alert(err.data.message);
+      } else if (err.message) {
+        alert(err.message);
+      } else {
+        alert("비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
     }
-  }
-};
-
+  };
 
   return (
     <>
