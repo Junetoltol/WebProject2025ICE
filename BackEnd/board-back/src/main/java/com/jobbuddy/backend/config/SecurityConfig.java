@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
  //Todo : 개발용으로 자소서 API 전부 허용해둠. 배포전 꼭 수정 필요!!!!!
+import org.springframework.security.config.Customizer;//CORS 적용 위해서 필요함
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -23,6 +24,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+            .cors(Customizer.withDefaults())
+            //CORS를 Spring Security에서 활성화 (WebConfig 설정이 적용되도록 함
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm ->
                     sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
