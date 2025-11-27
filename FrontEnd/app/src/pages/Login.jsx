@@ -6,32 +6,25 @@ import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
 
 // 🔹 새로 추가: 분리한 API 함수 import
+// ../api/auth에서는 예를 들어 이런 식으로 구현돼 있다고 가정:
+// export async function login({ username, password }) { ... }
 import { login } from "../api/auth";
 
+/* 전역 레이아웃 & 색상 변수 */
 const Global = createGlobalStyle`
-  /* 레이아웃 기본값 초기화 (위쪽 여백 방지) */
   html, body, #root { height: 100%; margin: 0; padding: 0; }
   *, *::before, *::after { box-sizing: border-box; }
-  #root { position: relative; isolation: isolate; }
   body { background: transparent; }
 
-  :root{
-    --gap-header-card: 90px;
-    --gap-title-first: 25px;
-
-    --gap-inputs-btn: 20px;
-    --gap-btn-bottom: 10px;
+  :root {
+    --gap-header-card: 90px;      /* 헤더 아래 ~ 카드 위 간격 */
+    --gap-page-bottom: 120px;
 
     --card-w: 540px;
-    --card-h: 490px;
 
-    --card-p: 40px;
-    --radius: 20px;
-
-    --primary: var(--jb-primary, #0f7f90);
-    --primary-pressed: color-mix(in oklab, var(--primary) 90%, black);
-    --shadow: 0 6px 18px rgba(0,0,0,0.12);
-    --field-h: 44px;
+    --primary: var(--jb-primary, #00678c);
+    --primary-hover: color-mix(in oklab, var(--primary) 85%, black);
+    --primary-pressed: color-mix(in oklab, var(--primary) 80%, black);
   }
 `;
 
@@ -50,11 +43,29 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // 🔹 API 분리: 실제 요청/토큰 저장은 api/auth.js의 login()이 담당
-      const { message } = await login(id, pw);
+      // 🟢 분리한 API 함수만 사용
+      // ../api/auth.js 에서 login({ username, password })가
+      // JSON( { status, message, data } )을 반환한다고 가정
+      const json = await login({ username: id, password: pw });
 
-      alert(message || "로그인에 성공했습니다.");
-      navigate("/"); // 성공 후 이동 경로
+      if (!json) {
+        throw new Error("서버 응답이 없습니다.");
+      }
+
+      const { status, message, data } = json;
+
+      if (status === 200 && data) {
+        const { tokenType, accessToken } = data;
+
+        // 🔐 토큰 저장 (나중에 Authorization 헤더에 사용)
+        const authToken = `${tokenType} ${accessToken}`; // "Bearer xxxxxx"
+        localStorage.setItem("authToken", authToken);
+
+        alert(message || "로그인에 성공했습니다.");
+        navigate("/"); // 로그인 성공 후 이동할 페이지
+      } else {
+        alert(message || "아이디 또는 비밀번호가 일치하지 않습니다.");
+      }
     } catch (err) {
       console.error(err);
       alert(err.message || "로그인에 실패했습니다.");
@@ -69,19 +80,20 @@ export default function Login() {
       <Background />
       <Header />
 
-      <Page>
+      <PageBody>
         <Card role="region" aria-label="로그인 카드">
-          <Title aria-label="Job Buddy">
+          {/* 로고 텍스트 */}
+          <LogoTitle aria-label="Job Buddy">
             <Accent>J</Accent>
             <Rest>ob </Rest>
             <Accent>B</Accent>
             <Rest>uddy</Rest>
-          </Title>
+          </LogoTitle>
 
           <Subtitle>와 함께, 새로운 시작을 해보세요.</Subtitle>
 
           <Form onSubmit={handleSubmit}>
-            <FieldGroup style={{ marginTop: "var(--gap-title-first)" }}>
+            <FieldGroup>
               <Label htmlFor="id">아이디</Label>
               <Input
                 id="id"
@@ -104,56 +116,45 @@ export default function Login() {
               />
             </FieldGroup>
 
-            <Button
-              type="submit"
-              style={{ marginTop: "var(--gap-inputs-btn)" }}
-              disabled={loading}
-            >
+            <LoginBtn type="submit" disabled={loading}>
               {loading ? "로그인 중..." : "로그인"}
-            </Button>
+            </LoginBtn>
 
-            <BottomRow style={{ marginTop: "var(--gap-btn-bottom)" }}>
+            <BottomRow>
               <span>아직 회원이 아니신가요?</span>
               <CleanLink to="/join">회원가입</CleanLink>
             </BottomRow>
           </Form>
         </Card>
-      </Page>
+      </PageBody>
     </>
   );
 }
 
-/* 색상 조합 */
-const Accent = styled.span`
-  color: #00678c;
-`;
-const Rest = styled.span`
-  color: #000;
-`;
+/* ====== Layout / Card ====== */
 
-/* 헤더가 fixed이므로, 헤더 높이 + 원하는 간격만큼 상단 패딩 */
-const Page = styled.main`
-  min-height: 100vh;
-  display: grid;
-  place-items: start center;
-  padding-top: calc(${HEADER_H}px + var(--gap-header-card));
-  padding-left: 24px;
-  padding-right: 24px;
-  padding-bottom: 24px;
+const PageBody = styled.main`
+  position: relative;
+  z-index: 10;
+  min-height: calc(100vh - ${HEADER_H}px);
+  display: flex;
+  justify-content: center;
+  padding-top: calc(${HEADER_H}px + var(--gap-header-card)); /* 헤더 + 90px */
+  padding-bottom: var(--gap-page-bottom);
 `;
 
 const Card = styled.section`
   width: var(--card-w);
-  height: var(--card-h);
-  padding: var(--card-p);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: saturate(120%) blur(3px);
-  box-shadow: var(--shadow);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  padding: 40px 56px 48px;
   box-sizing: border-box;
 `;
 
-const Title = styled.h1`
+/* ====== Text / Logo ====== */
+
+const LogoTitle = styled.h1`
   font-family: "STCaiyun", system-ui, -apple-system, "Segoe UI", Roboto,
     "Noto Sans KR", sans-serif;
   font-weight: 400;
@@ -164,79 +165,97 @@ const Title = styled.h1`
   margin: 0;
 `;
 
-const Subtitle = styled.p`
-  text-align: center;
-  opacity: 0.8;
-  margin-top: 12px;
-  margin-bottom: 0;
-  font-size: 16px;
+const Accent = styled.span`
+  color: #00678c;
 `;
 
+const Rest = styled.span`
+  color: #000000;
+`;
+
+const Subtitle = styled.p`
+  text-align: center;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.8);
+`;
+
+/* ====== Form & Inputs ====== */
+
 const Form = styled.form`
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  margin-top: 0;
 `;
 
 const FieldGroup = styled.div`
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const Label = styled.label`
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 `;
 
 const Input = styled.input`
-  height: var(--field-h);
-  padding: 0 16px;
-  border: 0;
-  outline: 0;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.1);
-  font-size: 16px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
+  background: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
   &::placeholder {
-    opacity: 0.6;
+    color: #b5b5b5;
   }
 
   &:focus {
-    box-shadow:
-      inset 0 0 0 2px rgba(0, 0, 0, 0.1),
-      0 0 0 3px color-mix(in oklab, var(--primary) 25%, white);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(0, 103, 140, 0.18);
   }
 `;
 
-const Button = styled.button`
-  height: 42px;
-  border: 0;
-  outline: 0;
-  border-radius: 999px;
+/* ====== Buttons / Bottom ====== */
+
+const BtnBase = styled.button`
+  width: 100%;
+  border: none;
+  border-radius: 12px;
   background: var(--primary);
-  color: #fff;
+  color: #ffffff;
   font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.8px;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  padding: 12px 0;
   cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 
-  &:active {
-    transform: translateY(2px);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  &:hover:not(:disabled) {
+    background: var(--primary-hover);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active:not(:disabled) {
     background: var(--primary-pressed);
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
   }
 
   &:disabled {
     opacity: 0.7;
     cursor: default;
-    transform: none;
-    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
   }
 `;
 
+const LoginBtn = styled(BtnBase)``;
+
 const BottomRow = styled.div`
+  margin-top: 12px;
   display: flex;
   justify-content: center;
   align-items: center;

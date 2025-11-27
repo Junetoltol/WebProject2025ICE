@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";   // 🔥 이 줄만 추가됨
+import { useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
 
@@ -9,22 +9,17 @@ import jobBuddyLogo from "../assets/Job Buddy logo.png";
 
 const PageLayer = styled.div`
   position: relative;
-  z-index: 1;   /* 배경보다 항상 위 */
+  z-index: 1; /* 배경보다 항상 위 */
   width: 100%;
   min-height: 100vh;
 `;
 
 const Main = styled.main`
   position: relative;
-  z-index: 1;  /* 배경(0)보다 앞으로 */
+  z-index: 1; /* 배경(0)보다 앞으로 */
 
   padding-top: ${HEADER_H}px; /* 고정 헤더만큼 아래로 밀기 */
 
-  background: linear-gradient(
-    180deg,
-    rgba(41, 198, 255, 0.25) 0%,
-    rgba(113, 189, 129, 0.25) 100%
-  );
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -33,13 +28,12 @@ const Main = styled.main`
   overflow-x: hidden;
 `;
 
-
 const Hero = styled.section`
   max-width: 1100px;
   margin: 0 auto;
   padding: 80px 24px 56px;
   display: grid;
-  grid-template-columns: 0.9fr 0.55fr; 
+  grid-template-columns: 0.9fr 0.55fr;
   gap: 32px;
 
   @media (max-width: 960px) {
@@ -115,6 +109,7 @@ const Button = styled.button`
   font-size: 15px;
   cursor: pointer;
   transition: 0.15s;
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
   &:hover {
     background: #094e61;
   }
@@ -129,6 +124,7 @@ const HeroImage = styled.img`
   }
 `;
 
+/* ===== 동그란 카드 영역 ===== */
 const Features = styled.section`
   max-width: 880px;
   margin: 1rem auto 3rem;
@@ -137,6 +133,7 @@ const Features = styled.section`
   gap: 1rem;
   flex-wrap: wrap;
   padding: 0 1.5rem;
+
   @media (max-width: 900px) {
     justify-content: center;
   }
@@ -145,21 +142,45 @@ const Features = styled.section`
 const FeatureCard = styled.div`
   width: 30%;
   min-width: 180px;
-  background: #006D944D;
-  border-radius: 999px;
-  height: 180px;
+
+  /* 완전한 원 유지 */
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+
+  background: #006d944d;
+  box-shadow: 0 7px 19px rgba(1, 69, 95, 0.12);
+
+  position: relative;
+  overflow: hidden;
+
+  @media (max-width: 900px) {
+    width: 220px;
+  }
+`;
+
+/* 원 안에서 내용 정확히 가운데 (살짝 위로 보정) */
+const FeatureInner = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* 살짝 위로 올리기 위해 -52% 사용 */
+  transform: translate(-50%, -52%);
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 6px;
   text-align: center;
-  box-shadow: 0 7px 19px rgba(1, 69, 95, 0.12);
+
+  svg {
+    display: block;
+  }
 `;
 
 const FeatureTitle = styled.div`
   font-weight: 700;
   color: #1b3542;
+  line-height: 1.2;
 `;
 
 const FeatureDesc = styled.div`
@@ -170,7 +191,7 @@ const FeatureDesc = styled.div`
 `;
 
 export default function Home() {
-  const navigate = useNavigate();   // 🔥 이 줄만 추가됨
+  const navigate = useNavigate();
 
   return (
     <>
@@ -188,7 +209,6 @@ export default function Home() {
               <LogoImage src={jobBuddyLogo} alt="Job Buddy 로고" />
               <SubText>와 함께해요!</SubText>
 
-              {/* 🔥 이 부분만 바뀜 */}
               <Button onClick={() => navigate("/self-intro/Info")}>
                 자기소개서 생성
               </Button>
@@ -199,27 +219,55 @@ export default function Home() {
 
           <Features>
             <FeatureCard>
-              <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              {/* ...SVG 내용 동일 */}  
-              </svg>
-              <FeatureTitle>동반자</FeatureTitle>
-              <FeatureDesc>막막한 첫 문장부터 마지막 다듬기까지 함께!</FeatureDesc>
+              <FeatureInner>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="60"
+                  height="60"
+                  viewBox="0 0 60 60"
+                  fill="none"
+                >
+                  {/* ...SVG 내용 동일 */}
+                </svg>
+                <FeatureTitle>동반자</FeatureTitle>
+                <FeatureDesc>
+                  막막한 첫 문장부터 마지막 다듬기까지 함께!
+                </FeatureDesc>
+              </FeatureInner>
             </FeatureCard>
+
             <FeatureCard>
-              <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              {/* ...SVG 내용 동일 */}  
-              </svg>
-              <FeatureTitle>맞춤형</FeatureTitle>
-              <FeatureDesc>
-                수많은 합격 자소서 분석 기반, 직무별 맞춤 제안
-              </FeatureDesc>
+              <FeatureInner>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="60"
+                  height="60"
+                  viewBox="0 0 60 60"
+                  fill="none"
+                >
+                  {/* ...SVG 내용 동일 */}
+                </svg>
+                <FeatureTitle>맞춤형</FeatureTitle>
+                <FeatureDesc>
+                  수많은 합격 자소서 분석 기반, 직무별 맞춤 제안
+                </FeatureDesc>
+              </FeatureInner>
             </FeatureCard>
+
             <FeatureCard>
-              <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              {/* ...SVG 내용 동일 */}  
-              </svg>
-              <FeatureTitle>효율성</FeatureTitle>
-              <FeatureDesc>시간 절약, 결과는 정교하게</FeatureDesc>
+              <FeatureInner>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="60"
+                  height="60"
+                  viewBox="0 0 60 60"
+                  fill="none"
+                >
+                  {/* ...SVG 내용 동일 */}
+                </svg>
+                <FeatureTitle>효율성</FeatureTitle>
+                <FeatureDesc>시간 절약, 결과는 정교하게</FeatureDesc>
+              </FeatureInner>
             </FeatureCard>
           </Features>
         </Main>
