@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import styled, { createGlobalStyle } from "styled-components";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
+import { login } from "../api/auth";
 
 /* 전역 레이아웃 & 색상 변수 */
 const Global = createGlobalStyle`
@@ -23,8 +24,6 @@ const Global = createGlobalStyle`
   }
 `;
 
-const BACKEND_BASE_URL = "http://localhost:8080";
-
 export default function Login() {
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
@@ -40,37 +39,21 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: id,
-          password: pw,
-        }),
+      // 🔹 auth.js 에서 토큰 저장까지 이미 처리함
+      const { status, message } = await login({
+        username: id,
+        password: pw,
       });
 
-      const json = await res.json().catch(() => null);
-
-      if (res.ok && json) {
-        const { status, message, data } = json;
-
-        if (status === 200 && data) {
-          const { tokenType, accessToken } = data;
-          const authToken = `${tokenType} ${accessToken}`;
-          localStorage.setItem("authToken", authToken);
-
-          alert(message || "로그인에 성공했습니다.");
-          navigate("/");
-        } else {
-          alert(message || "로그인에 실패했습니다.");
-        }
+      if (status === 200) {
+        alert(message || "로그인에 성공했습니다.");
+        navigate("/"); // 로그인 성공 후 이동
       } else {
-        const msg = json?.message || "아이디 또는 비밀번호가 일치하지 않습니다.";
-        alert(msg);
+        alert(message || "아이디 또는 비밀번호가 일치하지 않습니다.");
       }
     } catch (err) {
       console.error(err);
-      alert("서버와 통신 중 오류가 발생했습니다.");
+      alert(err.message || "로그인에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +67,6 @@ export default function Login() {
 
       <PageBody>
         <Card role="region" aria-label="로그인 카드">
-          {/* 로고 텍스트 */}
           <LogoTitle aria-label="Job Buddy">
             <Accent>J</Accent>
             <Rest>ob </Rest>
@@ -141,7 +123,7 @@ const PageBody = styled.main`
   min-height: calc(100vh - ${HEADER_H}px);
   display: flex;
   justify-content: center;
-  padding-top: calc(${HEADER_H}px + var(--gap-header-card)); /* 헤더 + 90px */
+  padding-top: calc(${HEADER_H}px + var(--gap-header-card));
   padding-bottom: var(--gap-page-bottom);
 `;
 

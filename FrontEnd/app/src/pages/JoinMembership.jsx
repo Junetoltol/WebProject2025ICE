@@ -4,6 +4,9 @@ import styled, { createGlobalStyle } from "styled-components";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
 
+// 🔹 분리한 회원가입 API 함수 import
+import { signup } from "../api/auth";
+
 /* 전역 변수 (색/간격 통일) */
 const Global = createGlobalStyle`
   :root{
@@ -109,6 +112,11 @@ const BtnBase = styled.button`
     transform: translateY(1px);
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
   }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: default;
+  }
 `;
 
 /* 가입 버튼 */
@@ -136,12 +144,14 @@ const LoginLine = styled.div`
 
 export default function JoinMembership() {
   const [formData, setFormData] = useState({
-    userId: "",
+    username: "",
     password: "",
     name: "",
     univ: "",
     major: "",
   });
+
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -152,7 +162,7 @@ export default function JoinMembership() {
     e.preventDefault();
 
     if (
-      !formData.userId.trim() ||
+      !formData.username.trim() ||
       !formData.password.trim() ||
       !formData.name.trim()
     ) {
@@ -160,7 +170,21 @@ export default function JoinMembership() {
       return;
     }
 
-    // 추후 axios.post("/api/auth/signup", formData, ...) 연결
+    setLoading(true);
+    try {
+      // 🔹 실제 요청은 api/auth.js 안의 signup 함수가 담당
+      const { message } = await signup(formData);
+
+      alert(message || "회원가입이 완료되었습니다.");
+
+      // 필요하면 여기서 리다이렉트 추가 가능
+      // navigate("/login");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "회원가입에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -176,8 +200,8 @@ export default function JoinMembership() {
           <Group>
             <Label>아이디 *</Label>
             <Input
-              name="userId"
-              value={formData.userId}
+              name="username"
+              value={formData.username}
               onChange={handleChange}
               placeholder="6~12자의 영문/숫자 조합"
               required
@@ -227,7 +251,9 @@ export default function JoinMembership() {
             />
           </Group>
 
-          <JoinBtn type="submit">가입하기</JoinBtn>
+          <JoinBtn type="submit" disabled={loading}>
+            {loading ? "가입 중..." : "가입하기"}
+          </JoinBtn>
 
           <LoginLine>
             계정이 있으신가요? <a href="/login">로그인</a>
