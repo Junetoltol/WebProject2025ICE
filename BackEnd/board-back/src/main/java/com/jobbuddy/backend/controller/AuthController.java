@@ -22,7 +22,7 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     // ===== 회원가입 =====
-    @PostMapping("/signup")
+    @PostMapping("/auth/signup")
     public ResponseEntity<ApiResponse<Void>> signup(@RequestBody User user) {
         try {
             userService.signup(user);
@@ -35,7 +35,7 @@ public class AuthController {
     }
 
     // ===== 로그인 (JWT 발급) =====
-    @PostMapping("/login")
+    @PostMapping("/auth/login")
     public ResponseEntity<ApiResponse<AuthDto.LoginResponse>> login(@RequestBody AuthDto.LoginRequest request) {
         boolean success = userService.login(request.getUsername(), request.getPassword());
         if (success) {
@@ -129,7 +129,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout() {
         return ResponseEntity.ok(new ApiResponse<>(200, "성공적으로 로그아웃되었습니다.", null));
     }
-}
+
 
     // ===== 핑 테스트 =====
     @GetMapping("/ping")
