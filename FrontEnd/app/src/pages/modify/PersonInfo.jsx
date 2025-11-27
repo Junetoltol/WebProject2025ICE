@@ -1,7 +1,7 @@
 // src/pages/modify/PersonInfo.jsx
-import React from "react";
+import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
 
@@ -31,6 +31,76 @@ const SearchSvg = () => (
 );
 
 export default function PersonInfo() {
+
+  // ====== 상태 관리 (이름 / 학교 / 전공 + 에러/성공 메시지) ======
+  const [name, setName] = useState("");
+  const [univ, setUniv] = useState("");
+  const [major, setMajor] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const navigate = useNavigate();
+
+  // ====== 저장하기 버튼 클릭 핸들러 ======
+  const handleSave = async () => {
+    if (loading) return;
+
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    // 🔐 로그인 시 localStorage에 저장한 토큰 키와 맞추기 (Login.jsx: authToken)
+    const token = localStorage.getItem("authToken");
+
+    if (!token) {
+      setErrorMsg("로그인 정보가 없습니다. 다시 로그인 해주세요.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await fetch("/api/users/me/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          // Login에서 이미 "Bearer xxx" 형태로 저장했으므로 그대로 사용
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          name,
+          univ,
+          major,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg =
+          data?.message ||
+          (res.status === 401
+            ? "인증 정보가 유효하지 않습니다."
+            : "입력 값의 형식이 올바르지 않습니다.");
+        setErrorMsg(msg);
+        return;
+      }
+
+      // 성공 메시지 (명세서 기본 메시지 사용)
+      setSuccessMsg(
+        data?.message || "이력 정보가 성공적으로 저장되었습니다."
+      );
+
+      // 잠깐 메시지 보여준 뒤 이동하고 싶으면 setTimeout 써도 됨
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("서버와 통신 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Global />
@@ -47,7 +117,7 @@ export default function PersonInfo() {
             <Input placeholder="이름" />
           </Field>
 
-          {/* 아이디 */}
+          {/* 아이디 (백엔드 연동 전이라 비활성화 인풋만 두기) */}
           <Field style={{ marginTop: 25 }}>
             <Label>아이디</Label>
             <Input placeholder="아이디" disabled />
@@ -66,7 +136,12 @@ export default function PersonInfo() {
             </LabelRow>
 
             <InputWrap>
-              <Input placeholder="학교 검색" style={{ paddingRight: 38 }} />
+              <Input
+                placeholder="학교 검색"
+                style={{ paddingRight: 38 }}
+                value={univ}
+                onChange={(e) => setUniv(e.target.value)}
+              />
               <SearchIcon type="button">
                 <SearchSvg />
               </SearchIcon>
@@ -75,13 +150,21 @@ export default function PersonInfo() {
 
           {/* 전공 */}
           <Field style={{ marginTop: 14 }}>
-            <Input placeholder="전공 입력" />
+            <Input
+              placeholder="전공 입력"
+              value={major}
+              onChange={(e) => setMajor(e.target.value)}
+            />
           </Field>
 
+          {/* 에러/성공 메시지 */}
+          {errorMsg && <ErrorText>{errorMsg}</ErrorText>}
+          {successMsg && <SuccessText>{successMsg}</SuccessText>}
+
           {/* 저장하기 (파란 버튼 – 로그인/회원가입과 동일 스타일) */}
-          <ButtonLink to="/Home">
-            <SaveBtn type="button">저장하기</SaveBtn>
-          </ButtonLink>
+          <SaveBtn type="button" onClick={handleSave} disabled={loading}>
+            {loading ? "저장 중..." : "저장하기"}
+          </SaveBtn>
         </Card>
       </PageBody>
     </>

@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
+import { createCoverLetterDraft } from "../../api/selfIntro"; // 🔹 추가
 
 // 달력 아이콘이 붙은 단일 date input
 function DateInputWithIcon({ placeholder }) {
@@ -30,7 +31,16 @@ function DateInputWithIcon({ placeholder }) {
 export default function IntroInfo() {
   const navigate = useNavigate();
 
-  // 각 섹션별 카드 ID 배열
+  // ✅ 기본 정보 (API로 보낼 값들)
+  const [title, setTitle] = useState("");
+  const [targetCompany, setTargetCompany] = useState("");
+  const [targetJob, setTargetJob] = useState("");
+
+  // ✅ 임시 저장 후 받은 coverLetterId 보관
+  const [coverLetterId, setCoverLetterId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  // 각 섹션별 카드 ID 배열 (UI 렌더링용)
   const [careerIds, setCareerIds] = useState([0]);
   const [projectIds, setProjectIds] = useState([0]);
   const [certIds, setCertIds] = useState([0]); // 자격증
@@ -47,12 +57,62 @@ export default function IntroInfo() {
   const removeId = (setter, id) =>
     setter((prev) => prev.filter((x) => x !== id));
 
-  const handleTempSave = () => {
-    alert("임시 저장은 나중에 실제 로직 연결");
+  // 🔹 임시 저장 → POST /api/cover-letters
+  const handleTempSave = async () => {
+    if (!title.trim()) {
+      alert("자기소개서 제목을 입력해 주세요.");
+      return;
+    }
+
+    if (!targetCompany.trim() || !targetJob.trim()) {
+      if (
+        !window.confirm(
+          "회사명 또는 지원 직무가 비어 있습니다.\n그래도 임시 저장하시겠습니까?"
+        )
+      ) {
+        return;
+      }
+    }
+
+    const payload = {
+      title: title || "",
+      targetCompany: targetCompany || "",
+      targetJob: targetJob || "",
+      sections: {
+        // TODO: 나중에 실제 입력값을 모두 연결할 수 있도록 확장
+        educationExperience: [], // 경력/인턴/알바, 교육 경험 등
+        projectExperience: [],
+        technicalSkills: [],
+        certifications: [],
+        awards: [],
+      },
+    };
+
+    try {
+      setSaving(true);
+      const result = await createCoverLetterDraft(payload);
+      // result.data = { coverLetterId: 1234 }
+      const newId = result.data.coverLetterId;
+      setCoverLetterId(newId);
+      alert("임시 저장되었습니다.");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "임시 저장 중 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // 🔹 다음 단계 → /self-intro/config 로 이동 (IntroConfig에서 설정 저장)
   const handleNext = () => {
-    navigate("/self-intro/config");
+    if (!coverLetterId) {
+      alert("먼저 임시 저장을 통해 자소서 초안을 생성해 주세요.");
+      return;
+    }
+
+    navigate("/self-intro/config", {
+      state: { coverLetterId },
+    });
   };
 
   return (
@@ -76,17 +136,29 @@ export default function IntroInfo() {
             <BasicFieldGroup>
               <FullFieldRow>
                 <FieldLabel>자기소개서 제목</FieldLabel>
-                <InputBox placeholder="제목을 입력해주세요." />
+                <InputBox
+                  placeholder="제목을 입력해주세요."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </FullFieldRow>
 
               <TwoColRow>
                 <FieldCol>
                   <FieldLabel>회사명</FieldLabel>
-                  <InputBox placeholder="ex. ICE Tech" />
+                  <InputBox
+                    placeholder="ex. ICE Tech"
+                    value={targetCompany}
+                    onChange={(e) => setTargetCompany(e.target.value)}
+                  />
                 </FieldCol>
                 <FieldCol>
                   <FieldLabel>지원 직무</FieldLabel>
-                  <InputBox placeholder="ex. 백엔드 개발자" />
+                  <InputBox
+                    placeholder="ex. 백엔드 개발자"
+                    value={targetJob}
+                    onChange={(e) => setTargetJob(e.target.value)}
+                  />
                 </FieldCol>
               </TwoColRow>
             </BasicFieldGroup>
@@ -458,8 +530,8 @@ export default function IntroInfo() {
 
           {/* 하단 버튼 */}
           <BottomButtonRow>
-            <BottomGrayBtn type="button" onClick={handleTempSave}>
-              임시 저장
+            <BottomGrayBtn type="button" onClick={handleTempSave} disabled={saving}>
+              {saving ? "저장 중..." : "임시 저장"}
             </BottomGrayBtn>
             <BottomBlueBtn type="button" onClick={handleNext}>
               다음
@@ -858,7 +930,6 @@ const TagBtn = styled.button`
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
   }
 `;
-
 
 /* 하단 버튼 */
 
