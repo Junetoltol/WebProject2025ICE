@@ -361,4 +361,32 @@ private Long getUserId(Authentication authentication) {
             this.title = title;
         }
     }
+
+    // 완성된 자소서 내용 수정 (PUT /api/cover-letters/{id}/content)
+@PutMapping("/{coverLetterId}/content")
+public ResponseEntity<ApiResponse<Void>> updateCoverLetterContent(
+        Authentication authentication,
+        @PathVariable Long coverLetterId,
+        @RequestBody ContentUpdateRequest request
+) {
+    Long userId = getUserId(authentication);
+    coverLetterService.updateGeneratedContent(userId, coverLetterId, request.getContent());
+
+    return ResponseEntity.ok(
+            new ApiResponse<>(
+                    200,
+                    "자기소개서 내용이 수정되었습니다.",
+                    null
+            )
+    );
+}
+
+// 내부 DTO
+public static class ContentUpdateRequest {
+    private String content;  // 혹은 sections 구조 전체
+
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+}
+
 }

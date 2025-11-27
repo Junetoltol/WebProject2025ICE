@@ -300,7 +300,7 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
 
         String generatedText = (res != null) ? res.getCoverLetter() : null;
-
+        System.out.println("=== [SERVICE] generatedText = " + generatedText);
         if (generatedText == null || generatedText.isBlank()) {
             coverLetter.setStatus(CoverLetterStatus.FAILED);
             coverLetterRepository.save(coverLetter);
@@ -341,5 +341,25 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                         .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
         coverLetter.updateTitle(newTitle);
+    }
+
+    // ===================== 완성된 자소서 내용 수정 =====================
+
+    @Override
+    @Transactional
+    public void updateGeneratedContent(Long userId, Long coverLetterId, String content) {
+        CoverLetter coverLetter =
+                coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
+                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
+
+        // sections JSON 안의 "generatedCoverLetter"만 교체
+        Map<String, Object> sections = coverLetter.getSections();
+        if (sections == null) {
+            sections = new HashMap<>();
+        }
+        sections.put("generatedCoverLetter", content);
+        coverLetter.setSections(sections);
+
+        coverLetterRepository.save(coverLetter);
     }
 }

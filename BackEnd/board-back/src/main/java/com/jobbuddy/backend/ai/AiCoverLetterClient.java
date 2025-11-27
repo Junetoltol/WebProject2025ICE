@@ -1,5 +1,6 @@
 package com.jobbuddy.backend.ai;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,10 @@ public class AiCoverLetterClient {
         String url = baseUrl + "/api/coverletter/generate";
         ResponseEntity<AiCoverLetterResponse> res =
                 restTemplate.postForEntity(url, request, AiCoverLetterResponse.class);
+
+        System.out.println("=== [AI CLIENT] status = " + res.getStatusCode());
+        System.out.println("=== [AI CLIENT] body   = " + res.getBody());
+
         return res.getBody();
     }
 
@@ -90,9 +95,22 @@ public class AiCoverLetterClient {
 
     // FastAPI 쪽 CoverLetterResponse
     public static class AiCoverLetterResponse {
-        private String cover_letter;
 
-        public String getCoverLetter() { return cover_letter; }
-        public void setCoverLetter(String cover_letter) { this.cover_letter = cover_letter; }
+        // JSON: { "cover_letter": "..." } 와 매핑
+        @JsonProperty("cover_letter")
+        private String coverLetter;
+
+        public String getCoverLetter() {
+            return coverLetter;
+        }
+
+        public void setCoverLetter(String coverLetter) {
+            this.coverLetter = coverLetter;
+        }
+
+        @Override
+        public String toString() {
+            return "AiCoverLetterResponse{coverLetter='" + coverLetter + "'}";
+        }
     }
 }

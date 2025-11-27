@@ -31,6 +31,7 @@ const SearchSvg = () => (
 );
 
 export default function PersonInfo() {
+
   // ====== 상태 관리 (이름 / 학교 / 전공 + 에러/성공 메시지) ======
   const [name, setName] = useState("");
   const [univ, setUniv] = useState("");
@@ -113,11 +114,7 @@ export default function PersonInfo() {
           {/* 이름 */}
           <Field>
             <Label>이름</Label>
-            <Input
-              placeholder="이름"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+            <Input placeholder="이름" />
           </Field>
 
           {/* 아이디 (백엔드 연동 전이라 비활성화 인풋만 두기) */}
@@ -330,25 +327,4 @@ const SaveBtn = styled.button`
     transform: translateY(1px);
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
   }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: default;
-    transform: none;
-  }
-`;
-
-/* 에러 / 성공 메시지 */
-const ErrorText = styled.p`
-  margin-top: 16px;
-  margin-bottom: 0;
-  font-size: 13px;
-  color: #d93025;
-`;
-
-const SuccessText = styled.p`
-  margin-top: 16px;
-  margin-bottom: 0;
-  font-size: 13px;
-  color: #0b6f8a;
 `;

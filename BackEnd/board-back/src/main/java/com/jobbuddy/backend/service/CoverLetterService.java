@@ -84,4 +84,8 @@ public interface CoverLetterService {
      * [보관함] 문서 이름 변경
      */
     void updateTitle(Long userId, Long resumeId, String newTitle);
+
+    // 완성된 자소서 내용 수정
+    void updateGeneratedContent(Long userId, Long coverLetterId, String content);
+
 }
