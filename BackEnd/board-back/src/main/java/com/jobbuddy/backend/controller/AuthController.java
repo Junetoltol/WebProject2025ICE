@@ -12,7 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api")
 public class AuthController {
 
     @Autowired
@@ -44,9 +44,7 @@ public class AuthController {
                     new ApiResponse<>(
                             200,
                             "로그인에 성공했습니다.",
-                            new AuthDto.LoginResponse("Bearer", token)
-                    )
-            );
+                            new AuthDto.LoginResponse("Bearer", token)));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse<>(401, "아이디 또는 비밀번호가 일치하지 않습니다.", null));
@@ -69,21 +67,18 @@ public class AuthController {
     @PatchMapping("/users/me/profile")
     public ResponseEntity<ApiResponse<Void>> updateProfile(
             Authentication authentication,
-            @RequestBody AuthDto.ProfileRequest request
-    ) {
-        String username = authentication.getName();   // ← principal 캐스팅 대신 getName() 사용
+            @RequestBody AuthDto.ProfileRequest request) {
+        String username = authentication.getName(); // ← principal 캐스팅 대신 getName() 사용
 
         boolean success = userService.updateProfile(
                 username,
                 request.getName(),
                 request.getUniv(),
-                request.getMajor()
-        );
+                request.getMajor());
 
         if (success) {
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "이력 정보가 성공적으로 저장되었습니다.", null)
-            );
+                    new ApiResponse<>(200, "이력 정보가 성공적으로 저장되었습니다.", null));
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse<>(400, "사용자를 찾을 수 없습니다.", null));
@@ -94,20 +89,17 @@ public class AuthController {
     @PatchMapping("/users/me/password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             Authentication authentication,
-            @RequestBody AuthDto.PasswordRequest request
-    ) {
-        String username = authentication.getName();   // ← 여기도 동일
+            @RequestBody AuthDto.PasswordRequest request) {
+        String username = authentication.getName(); // ← 여기도 동일
 
         try {
             userService.changePassword(
                     username,
                     request.getCurrentPassword(),
                     request.getNewPassword(),
-                    request.getConfirmPassword()
-            );
+                    request.getConfirmPassword());
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "비밀번호가 성공적으로 변경되었습니다.", null)
-            );
+                    new ApiResponse<>(200, "비밀번호가 성공적으로 변경되었습니다.", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse<>(400, e.getMessage(), null));
@@ -120,13 +112,12 @@ public class AuthController {
     // ===== 내 정보 조회 (JWT 필요) =====
     @GetMapping("/users/me")
     public ResponseEntity<ApiResponse<User>> getMe(Authentication authentication) {
-        String username = authentication.getName();   // ← 여기도 동일
+        String username = authentication.getName(); // ← 여기도 동일
         User user = userService.getUserByUsername(username);
 
         if (user != null) {
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "회원 정보를 조회했습니다.", user)
-            );
+                    new ApiResponse<>(200, "회원 정보를 조회했습니다.", user));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(404, "사용자를 찾을 수 없습니다.", null));
