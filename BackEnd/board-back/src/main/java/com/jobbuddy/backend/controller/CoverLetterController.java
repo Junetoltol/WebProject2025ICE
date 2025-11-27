@@ -28,34 +28,30 @@ public class CoverLetterController {
 
     public CoverLetterController(
             CoverLetterService coverLetterService,
-            UserRepository userRepository
-    ) {
+            UserRepository userRepository) {
         this.coverLetterService = coverLetterService;
         this.userRepository = userRepository;
     }
 
     // ===== 공통: Authentication -> userId(Long) 변환 =====
-private Long getUserId(Authentication authentication) {
-    if (authentication == null) {
-        throw new SecurityException("Unauthorized");
+    private Long getUserId(Authentication authentication) {
+        if (authentication == null) {
+            throw new SecurityException("Unauthorized");
+        }
+
+        // 토큰에 들어있는 값 = username (지금 JTT 같은 값)
+        String username = authentication.getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + username))
+                .getId();
     }
-
-    // 토큰에 들어있는 값 = username (지금 JTT 같은 값)
-    String username = authentication.getName();
-
-    return userRepository.findByUsername(username)
-            .orElseThrow(() -> new NoSuchElementException("User not found: " + username))
-            .getId();
-}
-
-
 
     // ===== 1. 자소서 초안 작성 (POST /api/cover-letters) =====
     @PostMapping
     public ResponseEntity<ApiResponse<CoverLetterReqDto.IdResponse>> createCoverLetter(
             Authentication authentication,
-            @RequestBody CoverLetterReqDto.SaveRequest request
-    ) {
+            @RequestBody CoverLetterReqDto.SaveRequest request) {
         Long userId = getUserId(authentication);
         Long id = coverLetterService.saveOrUpdateCoverLetter(userId, null, request);
 
@@ -63,9 +59,7 @@ private Long getUserId(Authentication authentication) {
                 new ApiResponse<>(
                         200,
                         "자기소개서 작성 정보가 저장되었습니다.",
-                        new CoverLetterReqDto.IdResponse(id)
-                )
-        );
+                        new CoverLetterReqDto.IdResponse(id)));
     }
 
     // ===== 1-2. 자소서 수정 (PATCH /api/cover-letters/{coverLetterId}) =====
@@ -73,8 +67,7 @@ private Long getUserId(Authentication authentication) {
     public ResponseEntity<ApiResponse<CoverLetterReqDto.IdResponse>> updateCoverLetter(
             Authentication authentication,
             @PathVariable Long coverLetterId,
-            @RequestBody CoverLetterReqDto.SaveRequest request
-    ) {
+            @RequestBody CoverLetterReqDto.SaveRequest request) {
         Long userId = getUserId(authentication);
         Long id = coverLetterService.saveOrUpdateCoverLetter(userId, coverLetterId, request);
 
@@ -82,9 +75,7 @@ private Long getUserId(Authentication authentication) {
                 new ApiResponse<>(
                         200,
                         "자기소개서 작성 정보가 업데이트 되었습니다.",
-                        new CoverLetterReqDto.IdResponse(id)
-                )
-        );
+                        new CoverLetterReqDto.IdResponse(id)));
     }
 
     // ===== 2. 템플릿 선택 (PUT /api/cover-letters/{coverLetterId}/template) =====
@@ -92,8 +83,7 @@ private Long getUserId(Authentication authentication) {
     public ResponseEntity<ApiResponse<Map<String, Object>>> selectTemplate(
             Authentication authentication,
             @PathVariable Long coverLetterId,
-            @RequestBody TemplateRequest request
-    ) {
+            @RequestBody TemplateRequest request) {
         Long userId = getUserId(authentication);
         coverLetterService.updateTemplate(userId, coverLetterId, request.getTemplateId());
 
@@ -101,25 +91,20 @@ private Long getUserId(Authentication authentication) {
                 new ApiResponse<>(
                         200,
                         "템플릿이 적용되었습니다.",
-                        Map.of("coverLetterId", coverLetterId, "templateId", request.getTemplateId())
-                )
-        );
+                        Map.of("coverLetterId", coverLetterId, "templateId", request.getTemplateId())));
     }
 
     // ===== 3. 자소서 미리보기 조회 (GET /api/cover-letters/{coverLetterId}) =====
     @GetMapping("/{coverLetterId}")
     public ResponseEntity<ApiResponse<CoverLetterPreviewResponse>> getCoverLetterDetail(
             Authentication authentication,
-            @PathVariable Long coverLetterId
-    ) {
+            @PathVariable Long coverLetterId) {
         Long userId = getUserId(authentication);
         try {
-            CoverLetterPreviewResponse response =
-                    coverLetterService.getCoverLetterPreview(coverLetterId, userId);
+            CoverLetterPreviewResponse response = coverLetterService.getCoverLetterPreview(coverLetterId, userId);
 
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "자소서 조회 성공.", response)
-            );
+                    new ApiResponse<>(200, "자소서 조회 성공.", response));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(404, "Cover letter not found.", null));
@@ -131,8 +116,7 @@ private Long getUserId(Authentication authentication) {
     public ResponseEntity<ApiResponse<Map<String, Object>>> saveSettings(
             Authentication authentication,
             @PathVariable Long coverLetterId,
-            @RequestBody SettingsRequest request
-    ) {
+            @RequestBody SettingsRequest request) {
         Long userId = getUserId(authentication);
 
         coverLetterService.updateSettings(
@@ -140,8 +124,7 @@ private Long getUserId(Authentication authentication) {
                 coverLetterId,
                 request.getQuestions(),
                 request.getTone(),
-                request.getLengthPerQuestion()
-        );
+                request.getLengthPerQuestion());
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -150,10 +133,7 @@ private Long getUserId(Authentication authentication) {
                         Map.of(
                                 "coverLetterId", coverLetterId,
                                 "tone", request.getTone(),
-                                "lengthPerQuestion", request.getLengthPerQuestion()
-                        )
-                )
-        );
+                                "lengthPerQuestion", request.getLengthPerQuestion())));
     }
 
     // ===== 5. 생성 요청 (POST /api/cover-letters/{coverLetterId}/generate) =====
@@ -161,8 +141,7 @@ private Long getUserId(Authentication authentication) {
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateCoverLetter(
             Authentication authentication,
             @PathVariable Long coverLetterId,
-            @RequestBody(required = false) GenerateRequest request
-    ) {
+            @RequestBody(required = false) GenerateRequest request) {
         Long userId = getUserId(authentication);
         coverLetterService.generateCoverLetter(userId, coverLetterId);
 
@@ -170,17 +149,16 @@ private Long getUserId(Authentication authentication) {
                 .body(new ApiResponse<>(
                         200,
                         "자소서 생성 요청이 접수되었습니다.",
-                        Map.of("coverLetterId", coverLetterId, "status", "PROCESSING")
-                ));
+                        Map.of("coverLetterId", coverLetterId, "status", "PROCESSING")));
     }
 
-    // ===== 6. 파일 다운로드 (GET /api/cover-letters/{coverLetterId}/download?format=pdf|word) =====
+    // ===== 6. 파일 다운로드 (GET
+    // /api/cover-letters/{coverLetterId}/download?format=pdf|word) =====
     @GetMapping("/{coverLetterId}/download")
     public ResponseEntity<Resource> downloadCoverLetter(
             Authentication authentication,
             @PathVariable Long coverLetterId,
-            @RequestParam String format
-    ) {
+            @RequestParam String format) {
         Long userId = getUserId(authentication);
         try {
             Resource file = coverLetterService.downloadCoverLetter(coverLetterId, format, userId);
@@ -195,8 +173,7 @@ private Long getUserId(Authentication authentication) {
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(
                             HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"cover-letter-" + coverLetterId + extension + "\""
-                    )
+                            "attachment; filename=\"cover-letter-" + coverLetterId + extension + "\"")
                     .body(file);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -207,8 +184,7 @@ private Long getUserId(Authentication authentication) {
     @PostMapping("/{coverLetterId}/archive")
     public ResponseEntity<ApiResponse<Map<String, Object>>> archiveCoverLetter(
             Authentication authentication,
-            @PathVariable Long coverLetterId
-    ) {
+            @PathVariable Long coverLetterId) {
         Long userId = getUserId(authentication);
         try {
             coverLetterService.archiveCoverLetter(coverLetterId, userId);
@@ -216,9 +192,7 @@ private Long getUserId(Authentication authentication) {
                     new ApiResponse<>(
                             200,
                             "보관함에 저장되었습니다.",
-                            Map.of("coverLetterId", coverLetterId, "archived", true)
-                    )
-            );
+                            Map.of("coverLetterId", coverLetterId, "archived", true)));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(404, "Not found", null));
@@ -233,30 +207,26 @@ private Long getUserId(Authentication authentication) {
             @RequestParam(required = false) String tone,
             @RequestParam(defaultValue = "updatedAt,desc") String sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
-    ) {
+            @RequestParam(defaultValue = "12") int size) {
         Long userId = getUserId(authentication);
 
-        PageResponse<CoverLetterListItemResponse> response =
-                coverLetterService.getArchivedCoverLetters(userId, q, tone, sort, page, size);
+        PageResponse<CoverLetterListItemResponse> response = coverLetterService.getArchivedCoverLetters(userId, q, tone,
+                sort, page, size);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(200, "목록 조회 성공.", response)
-        );
+                new ApiResponse<>(200, "목록 조회 성공.", response));
     }
 
     // ===== 9. 보관함 문서 삭제 (DELETE /api/cover-letters/{coverLetterId}) =====
     @DeleteMapping("/{coverLetterId}")
     public ResponseEntity<ApiResponse<Void>> deleteCoverLetter(
             Authentication authentication,
-            @PathVariable Long coverLetterId
-    ) {
+            @PathVariable Long coverLetterId) {
         Long userId = getUserId(authentication);
         try {
             coverLetterService.deleteCoverLetter(userId, coverLetterId);
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "자기소개서가 성공적으로 삭제되었습니다.", null)
-            );
+                    new ApiResponse<>(200, "자기소개서가 성공적으로 삭제되었습니다.", null));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(404, "해당 자기소개서를 찾을 수 없습니다.", null));
@@ -268,8 +238,7 @@ private Long getUserId(Authentication authentication) {
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateTitle(
             Authentication authentication,
             @PathVariable Long coverLetterId,
-            @RequestBody TitleUpdateRequest request
-    ) {
+            @RequestBody TitleUpdateRequest request) {
         Long userId = getUserId(authentication);
         try {
             coverLetterService.updateTitle(userId, coverLetterId, request.getTitle());
@@ -278,9 +247,7 @@ private Long getUserId(Authentication authentication) {
                     new ApiResponse<>(
                             200,
                             "자기소개서 제목이 성공적으로 변경되었습니다.",
-                            Map.of("coverLetterId", coverLetterId, "title", request.getTitle())
-                    )
-            );
+                            Map.of("coverLetterId", coverLetterId, "title", request.getTitle())));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(404, "해당 자기소개서를 찾을 수 없습니다.", null));
@@ -361,4 +328,34 @@ private Long getUserId(Authentication authentication) {
             this.title = title;
         }
     }
+
+    // 완성된 자소서 내용 수정 (PUT /api/cover-letters/{id}/content)
+    @PutMapping("/{coverLetterId}/content")
+    public ResponseEntity<ApiResponse<Void>> updateCoverLetterContent(
+            Authentication authentication,
+            @PathVariable Long coverLetterId,
+            @RequestBody ContentUpdateRequest request) {
+        Long userId = getUserId(authentication);
+        coverLetterService.updateGeneratedContent(userId, coverLetterId, request.getContent());
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        200,
+                        "자기소개서 내용이 수정되었습니다.",
+                        null));
+    }
+
+    // 내부 DTO
+    public static class ContentUpdateRequest {
+        private String content; // 혹은 sections 구조 전체
+
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
+        }
+    }
+
 }

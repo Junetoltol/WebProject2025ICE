@@ -50,33 +50,22 @@ def health():
 # - AI 모델을 통해 자소서 텍스트 생성
 # - 결과를 문자열로 정규화 및 길이 보정 후 반환
 # ------------------------------------------------------------
-@app.post("/api/coverletter/generate", response_model=CoverLetterResponse)
+@app.post("/api/coverletter/generate")
 async def coverletter_generate(req: CoverLetterRequest):
-    """
-    자소서 생성 엔드포인트:
-    - 요청 바디(CoverLetterRequest)를 검증
-    - 생성 로직 호출 (generate_cover_letter)
-    - 결과 정규화(항상 문자열) + 분량 보정 후 반환
-    """
     try:
-        # 1️⃣ 요청 데이터(Pydantic 모델)를 dict로 변환
         result = generate_cover_letter(req.model_dump())
-
-        # 2️⃣ 생성 결과에서 cover_letter 필드 추출
         raw = result.get("cover_letter", "")
-
-        # 3️⃣ 만약 모델이 dict 형태로 응답한 경우 문자열로 정규화
         text = _normalize_cover_letter(raw)
-
-        # 4️⃣ 요청자가 지정한 essay.length 기준으로 길이 보정
         text = clamp_length(text, req.essay.length)
 
-        # 5️⃣ 최종 응답은 Pydantic Response 모델로 반환 (자동 검증/직렬화)
-        return CoverLetterResponse(cover_letter=text)
+        print(">>> [AI SERVER] cover_letter:", text)
+
+        # 🔴 중요: 자바가 기대하는 키 이름 그대로!
+        return {"cover_letter": text}
 
     except Exception as e:
-        # 예외 발생 시 HTTP 500 으로 감싸서 반환 (내부 오류)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # ------------------------------------------------------------
 # [GET] /api/coverletter/export

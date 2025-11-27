@@ -1,10 +1,12 @@
 // src/pages/self-intro/IntroConfig.jsx
 import React, { useState } from "react";
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
+import { saveCoverLetterSettings } from "../../api/selfIntro";
 
+// 👉 명세의 예시와 완전히 같을 필요는 없지만 참고용
 const questionList = [
   { title: "지원 동기", desc: "왜 이 회사/기관에 지원했는지, 어떤 계기와 목표가 있는지" },
   { title: "본인의 강점 및 역량", desc: "자신이 가진 기술적 · 성격적 강점, 차별화된 경쟁력" },
@@ -34,11 +36,23 @@ function RadioIcon({ checked }) {
 
 export default function IntroConfig() {
   const navigate = useNavigate();
+  const params = useParams();
+  const location = useLocation();
 
-  /* ---------------------------
-    수정된 부분: 문항 복수 선택
-  --------------------------- */
-  const [selectedQuestions, setSelectedQuestions] = useState([questionList[0].title]);
+  // 1) URL 경로에서 받는 경우: /self-intro/config/:coverLetterId
+  // 2) 이전 페이지에서 state로 넘긴 경우: location.state.coverLetterId
+  const coverLetterId =
+    params.coverLetterId ?? location.state?.coverLetterId ?? null;
+
+  const [selectedQuestions, setSelectedQuestions] = useState([
+    questionList[0].title,
+  ]);
+  const [selectedTone, setSelectedTone] = useState(toneList[0].title);
+
+  // 🔸 명세에 맞춰 600/1000/1500 중 하나로 맞춤
+  const [selectedLength, setSelectedLength] = useState("1000");
+
+  const [saving, setSaving] = useState(false);
 
   const toggleQuestion = (title) => {
     setSelectedQuestions((prev) =>
@@ -46,9 +60,46 @@ export default function IntroConfig() {
     );
   };
 
-  // 기존 단일 선택
-  const [selectedTone, setSelectedTone] = useState(toneList[0].title);
-  const [selectedLength, setSelectedLength] = useState("500");
+  const handleGenerate = async () => {
+    if (!coverLetterId) {
+      alert("자소서 ID(coverLetterId)가 없습니다. 이전 페이지에서 제대로 넘어왔는지 확인해주세요.");
+      return;
+    }
+
+    if (selectedQuestions.length === 0) {
+      alert("최소 1개 이상의 문항을 선택해주세요.");
+      return;
+    }
+
+    const payload = {
+      questions: selectedQuestions,
+      tone: selectedTone, // 예: "전문적", "진솔한" 등
+      lengthPerQuestion: Number(selectedLength), // 600 / 1000 / 1500
+    };
+
+    try {
+      setSaving(true);
+
+      // 🔹 실제 API 호출 (토큰 포함, 예외 처리 모두 selfIntro.js에서 담당)
+      const result = await saveCoverLetterSettings(coverLetterId, payload);
+      // result.data = { coverLetterId, tone, lengthPerQuestion }
+
+      // 필요하면 result.data를 다음 페이지에 함께 넘길 수도 있음
+      navigate("/self-intro/loading", {
+        state: {
+          coverLetterId: result.data.coverLetterId,
+          tone: result.data.tone,
+          lengthPerQuestion: result.data.lengthPerQuestion,
+          questions: payload.questions,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "자소서 설정 저장 중 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -79,7 +130,11 @@ export default function IntroConfig() {
                       <QuestionHelp>{q.desc}</QuestionHelp>
                     </TextWrap>
 
-                    <RadioLabel onClick={(e) => e.stopPropagation()}>
+                    <RadioLabel
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
                       <HiddenInput
                         type="checkbox"
                         checked={isActive}
@@ -122,7 +177,7 @@ export default function IntroConfig() {
             <SectionTitle>자기소개서 문항 당 분량 설정</SectionTitle>
 
             <LengthOptions>
-              {["500", "1000", "1500"].map((len) => (
+              {["600", "1000", "1500"].map((len) => (
                 <LengthOption key={len}>
                   <RadioLabel>
                     <HiddenInput
@@ -140,8 +195,9 @@ export default function IntroConfig() {
             </LengthOptions>
           </CardLength>
 
-          <BottomBtn type="button" onClick={() => navigate("/self-intro/loading")}>
-            자소서 생성하기
+          {/* 저장 + 다음 단계로 이동 */}
+          <BottomBtn type="button" onClick={handleGenerate} disabled={saving}>
+            {saving ? "저장 중..." : "자소서 생성하기"}
           </BottomBtn>
         </InnerColumn>
       </PageBody>
@@ -215,7 +271,7 @@ const QuestionList = styled.ul`
 const QuestionItem = styled.li`
   padding: 14px 18px;
   border-radius: 16px;
-  border: 1px solid ${({ $active }) => ($active ? "#0f7f90" : "#D9D9D9")};
+  border: 1px solid ${({ $active }) => ($active ? "#0f7f90" : "#d9d9d9")};
   background: ${({ $active }) => ($active ? "#f5fbff" : "#ffffff")};
   display: flex;
   align-items: center;
@@ -260,7 +316,7 @@ const ToneGrid = styled.div`
 const ToneBox = styled.button`
   border-radius: 18px;
   padding: 20px 18px;
-  border: 1px solid ${({ $active }) => ($active ? "#0f7f90" : "#D9D9D9")};
+  border: 1px solid ${({ $active }) => ($active ? "#0f7f90" : "#d9d9d9")};
   background: ${({ $active }) => ($active ? "#f5fbff" : "#ffffff")};
   display: flex;
   flex-direction: column;
@@ -332,4 +388,9 @@ const BottomBtn = styled.button`
   font-size: 16px;
   font-weight: 700;
   box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: default;
+  }
 `;
