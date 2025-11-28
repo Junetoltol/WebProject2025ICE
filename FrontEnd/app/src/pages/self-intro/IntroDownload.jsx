@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import Header from "../../components/Header";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   downloadCoverLetterFile,
   archiveCoverLetter,
@@ -122,6 +122,7 @@ const WideBtn = styled(Btn)`
 export default function IntroDownload() {
   const location = useLocation();
   const params = useParams();
+  const navigate = useNavigate();
 
   // 🔹 우선순위: state로 온 값 > URL 파라미터
   const coverLetterId =
@@ -142,59 +143,59 @@ export default function IntroDownload() {
   );
 
   // 🔹 컴포넌트 마운트 시 / coverLetterId 변경 시 서버에서 내용 조회
-useEffect(() => {
-  if (!coverLetterId) return;
+  useEffect(() => {
+    if (!coverLetterId) return;
 
-  // 이미 state로 content가 넘어왔으면 서버 호출 안 함
-  if (location.state?.content) return;
+    // 이미 state로 content가 넘어왔으면 서버 호출 안 함
+    if (location.state?.content) return;
 
-  const fetchPreview = async () => {
-    try {
-      const res = await getCoverLetterDraft(coverLetterId);
-      const data = res?.data ?? res?.data?.data ?? res ?? {};
+    const fetchPreview = async () => {
+      try {
+        const res = await getCoverLetterDraft(coverLetterId);
+        const data = res?.data ?? res?.data?.data ?? res ?? {};
 
-      // 1순위: content 문자열이 바로 있다면 그걸 사용
-      if (typeof data.content === "string") {
-        setPreviewText(data.content);
-        return;
-      }
-
-      // 2순위: sections 배열이면 question/answer를 합쳐서 문자열로 생성
-      if (Array.isArray(data.sections)) {
-        const joined = data.sections
-          .map((section, idx) => {
-            if (!section) return "";
-
-            const q =
-              section.question ||
-              section.title ||
-              `문항 ${idx + 1}`;
-            const a =
-              section.answer ||
-              section.content ||
-              section.body ||
-              "";
-
-            if (q && a) return `Q${idx + 1}. ${q}\n${a}`;
-            return a || q || "";
-          })
-          .filter(Boolean)
-          .join("\n\n");
-
-        if (joined) {
-          setPreviewText(joined);
+        // 1순위: content 문자열이 바로 있다면 그걸 사용
+        if (typeof data.content === "string") {
+          setPreviewText(data.content);
           return;
         }
+
+        // 2순위: sections 배열이면 question/answer를 합쳐서 문자열로 생성
+        if (Array.isArray(data.sections)) {
+          const joined = data.sections
+            .map((section, idx) => {
+              if (!section) return "";
+
+              const q =
+                section.question ||
+                section.title ||
+                `문항 ${idx + 1}`;
+              const a =
+                section.answer ||
+                section.content ||
+                section.body ||
+                "";
+
+              if (q && a) return `Q${idx + 1}. ${q}\n${a}`;
+              return a || q || "";
+            })
+            .filter(Boolean)
+            .join("\n\n");
+
+          if (joined) {
+            setPreviewText(joined);
+            return;
+          }
+        }
+
+        // 그래도 없으면 placeholder 유지
+      } catch (e) {
+        console.error("자기소개서 미리보기 조회 실패", e);
       }
+    };
 
-      // 그래도 없으면 placeholder 유지
-    } catch (e) {
-      console.error("자기소개서 미리보기 조회 실패", e);
-    }
-  };
-
-  fetchPreview();
-}, [coverLetterId, location.state]);
+    fetchPreview();
+  }, [coverLetterId, location.state]);
 
   const disabled = !coverLetterId;
 
@@ -229,6 +230,7 @@ useEffect(() => {
     }
   };
 
+  // ===== 보관함 저장 + 보관함 페이지 이동 =====
   const handleArchive = async () => {
     if (!coverLetterId) {
       alert("coverLetterId 정보가 없어 보관함에 저장할 수 없습니다.");
@@ -238,6 +240,9 @@ useEffect(() => {
     try {
       await archiveCoverLetter(coverLetterId);
       alert("보관함에 저장되었습니다.");
+
+      // ✅ 보관함 페이지로 이동 (경로는 실제 라우터에 맞춰 수정)
+      navigate("/self-intro/store");
     } catch (err) {
       console.error(err);
       alert(err.message || "보관함 저장에 실패했습니다.");
@@ -247,73 +252,21 @@ useEffect(() => {
   return (
     <Wrap>
       <Header />
-      <Wrap>
-        <Container>
-          <Box>
-            <div
-              style={{
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                gap: "20px",
-              }}
-            >
-              <Title>자소서가 완성되었어요 !</Title>
-              <Sub>Word와 PDF로 다운받아 자유롭게 수정해 보세요.</Sub>
-            </div>
-
-            <PreviewWrap>
-              <ScrollPaper>
-                <PreviewText>{previewContent}</PreviewText>
-              </ScrollPaper>
-            </PreviewWrap>
-
-            <BtnRow>
-              <Btn
-                onClick={() => handleDownload("word")}
-                disabled={disabled}
-                title={
-                  disabled
-                    ? "coverLetterId가 없어 다운로드할 수 없습니다."
-                    : ""
-                }
-              >
-                word로 다운로드
-              </Btn>
-              <Btn
-                onClick={() => handleDownload("pdf")}
-                disabled={disabled}
-                title={
-                  disabled
-                    ? "coverLetterId가 없어 다운로드할 수 없습니다."
-                    : ""
-                }
-              >
-                pdf로 다운로드
-              </Btn>
-            </BtnRow>
-
-            <WideBtn
-              onClick={handleArchive}
-              disabled={disabled}
-              title={
-                disabled
-                  ? "coverLetterId가 없어 보관함에 저장할 수 없습니다."
-                  : ""
-              }
-            >
-              보관함에 저장
-            </WideBtn>
-          </Box>
-        </Container>
-      </Wrap>
-    </>
       <Container>
         <Box>
-          <Title>
-            {userName} 님의 {fileTitle}가 완성되었어요!
-          </Title>
-          <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
+          <div
+            style={{
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+            }}
+          >
+            <Title>
+              {userName} 님의 {fileTitle}가 완성되었어요!
+            </Title>
+            <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
+          </div>
 
           <PreviewWrap>
             <ScrollPaper>
@@ -322,15 +275,39 @@ useEffect(() => {
           </PreviewWrap>
 
           <BtnRow>
-            <Btn disabled={disabled} onClick={() => handleDownload("word")}>
+            <Btn
+              disabled={disabled}
+              onClick={() => handleDownload("word")}
+              title={
+                disabled
+                  ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                  : ""
+              }
+            >
               word로 다운로드
             </Btn>
-            <Btn disabled={disabled} onClick={() => handleDownload("pdf")}>
+            <Btn
+              disabled={disabled}
+              onClick={() => handleDownload("pdf")}
+              title={
+                disabled
+                  ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                  : ""
+              }
+            >
               pdf로 다운로드
             </Btn>
           </BtnRow>
 
-          <WideBtn disabled={disabled} onClick={handleArchive}>
+          <WideBtn
+            disabled={disabled}
+            onClick={handleArchive}
+            title={
+              disabled
+                ? "coverLetterId가 없어 보관함에 저장할 수 없습니다."
+                : ""
+            }
+          >
             보관함에 저장
           </WideBtn>
         </Box>

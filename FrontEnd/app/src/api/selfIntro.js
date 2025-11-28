@@ -319,6 +319,7 @@ export async function archiveCoverLetter(coverLetterId) {
   try {
     res = await api.post(`/api/cover-letters/${coverLetterId}/archive`);
   } catch (err) {
+    // 네트워크 자체 실패 (서버 안 켜짐, CORS, 인터넷 끊김 등)
     if (!err.response) {
       console.error("보관함 저장 네트워크 오류:", err);
       throw new Error(
@@ -326,6 +327,7 @@ export async function archiveCoverLetter(coverLetterId) {
       );
     }
 
+    // 서버가 에러 응답을 준 경우
     const status = err.response.status;
     const json = err.response.data ?? {};
     const message =
@@ -342,10 +344,13 @@ export async function archiveCoverLetter(coverLetterId) {
 
   const json = res.data ?? null;
 
-  if (!json || json.code !== 200) {
+  // 백엔드 ApiResponse 형태: { code, message, data }
+  const code = json?.code ?? json?.status;
+
+  if (!json || !(code === 200 || code === "SU")) {
     throw new Error(json?.message || "보관함 저장에 실패했습니다.");
   }
 
-  // { code, message, data: { coverLetterId, archived: true } }
+  // data: { coverLetterId, archived: true }
   return json.data;
 }
