@@ -3,6 +3,7 @@ import api from "./api";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const GRANT_TYPE_KEY = "grantType";
+const USERNAME_KEY = "username";
 
 /**
  * 내부용: 토큰 제거
@@ -11,6 +12,7 @@ export function clearAuthToken() {
   try {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(GRANT_TYPE_KEY);
+    localStorage.removeItem(USERNAME_KEY);
   } catch (e) {
     console.error("로컬 스토리지 토큰 제거 실패:", e);
   }
@@ -116,6 +118,7 @@ export async function login({ username, password }) {
   try {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     localStorage.setItem(GRANT_TYPE_KEY, grantType);
+    localStorage.setItem(USERNAME_KEY, username); 
   } catch (e) {
     console.error("로컬 스토리지 저장 실패:", e);
     throw new Error("브라우저 저장소에 토큰을 저장할 수 없습니다.");

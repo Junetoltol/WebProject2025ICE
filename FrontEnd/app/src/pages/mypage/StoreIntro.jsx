@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";   // 🔥 추가
 import Header from "../../components/Header";
@@ -150,13 +150,52 @@ const DocDate = styled.div`
 `;
 
 export default function StoreIntro() {
-  const navigate = useNavigate();   // 🔥 추가
+  const navigate = useNavigate();   
 
-  const docs = [
-    { id: 1, title: "새문서 1", modified: "2025.01.01" },
-    { id: 2, title: "새문서 2", modified: "2025.01.03" },
-    { id: 3, title: "새문서 3", modified: "2025.01.05" },
-  ];
+ // 🔹 사용자 이름 상태 (ooo 대신 들어갈 곳)
+ const [userName, setUserName] = useState("사용자");
+
+ // 🔹 자소서 목록 상태 (나중에 서버에서 받아오면 여기만 바꾸면 됨)
+ const [docs, setDocs] = useState([
+   { id: 1, title: "새문서 1", modified: "2025.01.01" },
+   { id: 2, title: "새문서 2", modified: "2025.01.03" },
+   { id: 3, title: "새문서 3", modified: "2025.01.05" },
+ ]);
+
+ // 🔹 로그인할 때 localStorage에 userName 저장해놨다고 가정
+ useEffect(() => {
+   const savedName = localStorage.getItem("userName");
+   if (savedName) {
+     setUserName(savedName);
+   }
+ }, []);
+
+ // ✅ 1) 자소서 열기 (제목/썸네일 클릭 시)
+ const handleOpenDoc = (docId) => {
+   // 라우터 규칙에 맞게 경로는 바꿔도 됨!
+   navigate(`/self-intro/${docId}`);
+ };
+
+ // ✅ 2) 삭제하기 (버튼 클릭 시)
+ const handleDeleteDoc = (docId) => {
+   const ok = window.confirm("정말 이 자소서를 삭제할까요?");
+   if (!ok) return;
+
+   // 화면에서 제거
+   setDocs((prev) => prev.filter((doc) => doc.id !== docId));
+
+   // TODO: 나중에 서버랑 연동할 때 여기서 삭제 API 호출하면 됨
+ };
+
+ // ✅ 3) 다운로드 (원하면 나중에 API 연결)
+ const handleDownloadDoc = (docId) => {
+   console.log("다운로드 클릭:", docId);
+   // TODO: 파일 다운로드 API 연동 예정
+ };
+
+ 
+
+
 
   return (
     <>
@@ -166,11 +205,11 @@ export default function StoreIntro() {
           <Box>
             <BoxHeader>
               <TitleGroup>
-                <Title>ooo 님의 자소서 보관함</Title>
+                <Title>{userName} 님의 자소서 보관함</Title>
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
 
-              {/* 🔥 이동 기능 추가된 부분 */}
+              {/*이동 기능 추가된 부분 */}
               <NewButton onClick={() => navigate("/self-intro/Info")}>
                 새 자소서 작성하기
               </NewButton>
@@ -179,15 +218,34 @@ export default function StoreIntro() {
             <CardRow>
               {docs.map((doc) => (
                 <DocCard key={doc.id}>
-                  <DocThumbnail>
+                  {/* 썸네일을 클릭해도 해당 자소서로 이동 */}
+     <DocThumbnail onClick={() => handleOpenDoc(doc.id)}>
                     <Overlay className="overlay">
-                      <ActionButton variant="edit">수정</ActionButton>
-                      <ActionButton variant="download">다운로드</ActionButton>
-                      <ActionButton variant="delete">삭제하기</ActionButton>
+                    <ActionButton
+                    variant="download"
+                     onClick={(e) => {
+                       e.stopPropagation();          // 썸네일 클릭 이벤트 막기
+                       handleDownloadDoc(doc.id);
+                     }}
+                   >
+                     다운로드
+                   </ActionButton>
+                   <ActionButton
+                     variant="delete"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       handleDeleteDoc(doc.id);
+                     }}
+                   >
+                       삭제하기
+                   </ActionButton>  
                     </Overlay>
                   </DocThumbnail>
-
-                  <DocName>{doc.title}</DocName>
+                    {/* 제목을 눌러도 이동되게 */}
+                   <DocName onClick={() => handleOpenDoc(doc.id)}>
+                    {doc.title}
+                   </DocName>
+                  
                   <DocDate>수정일자: {doc.modified}</DocDate>
                 </DocCard>
               ))}
