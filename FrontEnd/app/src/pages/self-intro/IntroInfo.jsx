@@ -1,11 +1,12 @@
 // src/pages/self-intro/IntroInfo.jsx
 import React, { useState, useRef } from "react";
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
-import { createCoverLetterDraft } from "../../api/selfIntro"; // 자소서 초안 API
+import { createCoverLetterDraft, updateCoverLetterDraft } from "../../api/selfIntro"; // 자소서 초안 API
 import { createResumeDraft, updateResumeDraft } from "../../api/resume"; // 🔹 이력서 초안 API 추가
+import { getCoverLetterDraft } from "../../api/selfIntro"; //추가한놈 최은준
 
 // 달력 아이콘이 붙은 단일 date input
 function DateInputWithIcon({ placeholder }) {
@@ -31,6 +32,9 @@ function DateInputWithIcon({ placeholder }) {
 
 export default function IntroInfo() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+
 
   // ✅ 기본 정보 (API로 보낼 값들)
   const [title, setTitle] = useState("");
@@ -38,7 +42,8 @@ export default function IntroInfo() {
   const [targetJob, setTargetJob] = useState("");
 
   // ✅ 임시 저장 후 받은 coverLetterId 보관
-  const [coverLetterId, setCoverLetterId] = useState(null);
+  const initialCoverLetterId = location.state?.coverLetterId ?? null;
+  const [coverLetterId, setCoverLetterId] = useState(initialCoverLetterId);
 
   // ✅ 이력서 초안용 resumeId
   const [resumeId, setResumeId] = useState(null);
@@ -136,11 +141,23 @@ export default function IntroInfo() {
     try {
       setSaving(true);
 
-      // 1) 자기소개서 초안 저장 (기존 로직)
-      const coverResult = await createCoverLetterDraft(coverLetterPayload);
-      const newCoverId = coverResult.data?.coverLetterId;
-      setCoverLetterId(newCoverId);
+   // 1) 자기소개서 초안 저장/수정
+      let coverResult;
+      if (coverLetterId) {
+       // 이미 한 번 생성된 자소서라면 → PATCH /api/cover-letters/{id}
+      coverResult = await updateCoverLetterDraft(
+          coverLetterId,
+          coverLetterPayload
+      );
+    }else {
+      coverResult = await createCoverLetterDraft(coverLetterPayload);
+      }
 
+      const newCoverId = coverResult.data?.coverLetterId;
+      // 새로 생성된 경우든 수정이든, 응답의 id로 업데이트
+      if (newCoverId) {
+      setCoverLetterId(newCoverId);
+      }
       // 2) 이력서 초안 저장 / 수정
       let newResumeId = resumeId;
 
@@ -1031,3 +1048,21 @@ const BottomBlueBtn = styled(BaseBottomBtn)`
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
   }
 `;
+//추가한놈 최은준, 임시저장 다시 보이기
+useEffect(() => {
+  if (!initialCoverLetterId) return;
+
+  (async () => {
+    try {
+      const draft = await getCoverLetterDraft(initialCoverLetterId);
+      setCoverLetterId(draft.id);
+      setTitle(draft.title || "");
+      setTargetCompany(draft.targetCompany || "");
+      setTargetJob(draft.targetJob || "");
+      // sections 안에 있는 값들도 나중에 연결 가능
+    } catch (e) {
+      console.error(e);
+      // 필요한 경우 에러 메시지 표시
+    }
+  })();
+}, [initialCoverLetterId]);
