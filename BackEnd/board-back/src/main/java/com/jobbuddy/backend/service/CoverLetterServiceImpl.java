@@ -1,5 +1,4 @@
 package com.jobbuddy.backend.service;
-
 // 만든놈 최은준
 
 import com.jobbuddy.backend.ai.AiCoverLetterClient;
@@ -47,72 +46,269 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         this.aiCoverLetterClient = aiCoverLetterClient;
     }
 
-    // ===================== 미리보기 =====================
+    // =================================================================================
+    // (1), (3), (5) 미리보기 조회 (vA 스타일 유지)
+    // =================================================================================
+@Override
+@Transactional(readOnly = true)
+public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
+    CoverLetter coverLetter = coverLetterRepository
+            .findByIdAndOwnerId(coverLetterId, userId)
+            .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
 
+    return new CoverLetterPreviewResponse(
+            coverLetter.getId(),
+            coverLetter.getTitle(),
+            coverLetter.getQuestions(),
+            coverLetter.getTone(),
+            coverLetter.getLengthPerQuestion(),
+            coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
+            coverLetter.getPreviewUrl(),
+            coverLetter.getCreatedAt(),
+            coverLetter.getUpdatedAt()
+    );
+}
+
+
+    // =================================================================================
+    // (1) 임시 저장
+    // =================================================================================
     @Override
-    public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
-        CoverLetter coverLetter = coverLetterRepository
-                .findByIdAndOwnerId(coverLetterId, userId)
-                .orElseThrow(() ->
-                        new NoSuchElementException("Cover letter not found."));
+    @Transactional
+    public Long saveOrUpdateCoverLetter(Long userId,
+                                        Long coverLetterId,
+                                        CoverLetterReqDto.SaveRequest request) {
+        if (coverLetterId == null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Cover letter is not generated yet.");
+            CoverLetter coverLetter = new CoverLetter();
+            coverLetter.setOwner(user);
+            coverLetter.updateContent(
+                    request.getTitle(),
+                    request.getTargetCompany(),
+                    request.getTargetJob(),
+                    request.getSections()
+            );
+            // vA: 새로 저장할 때 보관함에 바로 포함
+            coverLetter.setArchived(true);
+            coverLetter.setStatus(CoverLetterStatus.PROCESSING);
+            return coverLetterRepository.save(coverLetter).getId();
+        } else {
+            CoverLetter coverLetter =
+                    coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
+                            .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
+
+            coverLetter.updateContent(
+                    request.getTitle(),
+                    request.getTargetCompany(),
+                    request.getTargetJob(),
+                    request.getSections()
+            );
+            return coverLetter.getId();
         }
-
-        return new CoverLetterPreviewResponse(
-                coverLetter.getId(),
-                coverLetter.getTitle(),
-                coverLetter.getQuestions(),
-                coverLetter.getTone(),
-                coverLetter.getLengthPerQuestion(),
-                coverLetter.getStatus().name(),
-                coverLetter.getPreviewUrl(),
-                coverLetter.getCreatedAt(),
-                coverLetter.getUpdatedAt()
-        );
     }
 
-    // ===================== 파일 다운로드 & 보관함 저장 =====================
+    // =================================================================================
+    // (2) 설정 저장
+    // =================================================================================
+    @Override
+    @Transactional
+    public void updateSettings(Long userId,
+                               Long coverLetterId,
+                               List<String> questions,
+                               String tone,
+                               Integer lengthPerQuestion) {
+        CoverLetter coverLetter =
+                coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
+                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
+        coverLetter.setQuestions(questions);
+        coverLetter.setTone(tone);
+        coverLetter.setLengthPerQuestion(lengthPerQuestion);
+    }
+
+    // =================================================================================
+    // (2), (3) 생성 요청 – vA 베이스 + vB의 섹션 파싱/유연성 + vA 에러 처리
+    // =================================================================================
+    @Override
+    @Transactional
+    public void generateCoverLetter(Long userId, Long coverLetterId) {
+        CoverLetter coverLetter = coverLetterRepository
+                .findByIdAndOwnerId(coverLetterId, userId)
+                .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
+
+        // vA 도메인 메서드 그대로 사용
+        coverLetter.startProcessing();
+        coverLetterRepository.save(coverLetter);
+
+        try {
+            AiCoverLetterRequest req = new AiCoverLetterRequest();
+            Map<String, Object> sections = coverLetter.getSections();
+            ResumeData data = new ResumeData();
+
+            if (sections != null) {
+                // profile
+                Object profileObj = sections.get("profile");
+                if (profileObj instanceof Map<?, ?>) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> profileMap = (Map<String, Object>) profileObj;
+                    data.setProfile(profileMap);
+                }
+
+                // experiences ← experiences | experience | educationExperience
+                Object expObj = sections.get("experiences");
+                if (expObj == null) expObj = sections.get("experience");
+                if (expObj == null) expObj = sections.get("educationExperience");
+                if (expObj instanceof List<?>) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> expList = (List<Map<String, Object>>) expObj;
+                    data.setExperiences(expList);
+                }
+
+                // projects ← projects | projectExperience
+                Object projObj = sections.get("projects");
+                if (projObj == null) projObj = sections.get("projectExperience");
+                if (projObj instanceof List<?>) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> projList = (List<Map<String, Object>>) projObj;
+                    data.setProjects(projList);
+                }
+
+                // activities ← activities | club | clubs
+                Object actObj = sections.get("activities");
+                if (actObj == null) actObj = sections.get("club");
+                if (actObj == null) actObj = sections.get("clubs");
+                if (actObj instanceof List<?>) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> actList = (List<Map<String, Object>>) actObj;
+                    data.setActivities(actList);
+                }
+
+                // awards
+                Object awardsObj = sections.get("awards");
+                if (awardsObj instanceof List<?>) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> awardsList = (List<Map<String, Object>>) awardsObj;
+                    data.setAwards(awardsList);
+                }
+
+                // skills ← skills | technicalSkills
+                Object skillsObj = sections.get("skills");
+                if (skillsObj == null) skillsObj = sections.get("technicalSkills");
+                if (skillsObj instanceof List<?>) {
+                    List<?> rawList = (List<?>) skillsObj;
+                    if (!rawList.isEmpty()) {
+                        Object first = rawList.get(0);
+                        if (first instanceof String) {
+                            // List<String>
+                            @SuppressWarnings("unchecked")
+                            List<String> skillNames = (List<String>) skillsObj;
+                            data.setSkills(skillNames);
+                        } else if (first instanceof Map<?, ?>) {
+                            // List<Map<String,Object>> → name 필드만 추출
+                            @SuppressWarnings("unchecked")
+                            List<Map<String, Object>> skillMapList = (List<Map<String, Object>>) skillsObj;
+                            List<String> names = skillMapList.stream()
+                                    .map(m -> String.valueOf(m.getOrDefault("name", "")))
+                                    .collect(Collectors.toList());
+                            data.setSkills(names);
+                        }
+                    }
+                }
+            }
+
+            req.setData(data);
+
+            EssayConfig essay = new EssayConfig();
+            essay.setQuestion("지원 동기");
+            essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
+            essay.setLength(coverLetter.getLengthPerQuestion() != null
+                    ? coverLetter.getLengthPerQuestion()
+                    : 1000);
+            req.setEssay(essay);
+
+            AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
+
+            if (res == null || res.getCoverLetter() == null || res.getCoverLetter().isBlank()) {
+                coverLetter.setStatus(CoverLetterStatus.FAILED);
+                coverLetterRepository.save(coverLetter);
+                throw new IllegalStateException("AI Response is empty");
+            }
+
+            Map<String, Object> updatedSections = coverLetter.getSections();
+            if (updatedSections == null) updatedSections = new HashMap<>();
+
+            updatedSections.put("generatedCoverLetter", res.getCoverLetter());
+            coverLetter.setSections(updatedSections);
+
+            // vA의 도메인 메서드 사용
+            coverLetter.completeGeneration(null);
+            coverLetterRepository.save(coverLetter);
+
+        } catch (Exception e) {
+            coverLetter.setStatus(CoverLetterStatus.FAILED);
+            coverLetterRepository.save(coverLetter);
+            throw new RuntimeException("Generation failed", e);
+        }
+    }
+
+    // =================================================================================
+    // (4) 다운로드 – vA 스타일 (내용 실제 포함, format은 아직 사용 안 함)
+    // =================================================================================
     @Override
     public Resource downloadCoverLetter(Long coverLetterId, String format, Long userId) {
         CoverLetter coverLetter = coverLetterRepository
                 .findByIdAndOwnerId(coverLetterId, userId)
-                .orElseThrow(() ->
-                        new NoSuchElementException("Cover letter not found."));
+                .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
 
         if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Cover letter is not generated yet.");
+            throw new IllegalStateException("Not generated yet.");
         }
 
-        String normalized = format == null ? "" : format.toLowerCase();
-        if (!normalized.equals("word") && !normalized.equals("pdf")) {
-            throw new IllegalArgumentException("Unsupported format.");
+        String content;
+        if (coverLetter.getSections() != null &&
+                coverLetter.getSections().containsKey("generatedCoverLetter")) {
+            content = String.valueOf(coverLetter.getSections().get("generatedCoverLetter"));
+        } else {
+            content = "내용이 없습니다.";
         }
 
-        String dummy = "Cover letter " + coverLetter.getId() + " (" + normalized + ")";
-        byte[] bytes = dummy.getBytes(StandardCharsets.UTF_8);
+        String fileContent = "제목: " + coverLetter.getTitle() + "\n\n" + content;
+        byte[] bytes = fileContent.getBytes(StandardCharsets.UTF_8);
 
         return new ByteArrayResource(bytes);
     }
 
+    // =================================================================================
+    // (5) 보관함 삭제
+    // =================================================================================
     @Override
     @Transactional
-    public void archiveCoverLetter(Long coverLetterId, Long userId) {
-        CoverLetter coverLetter = coverLetterRepository
-                .findByIdAndOwnerId(coverLetterId, userId)
-                .orElseThrow(() ->
-                        new NoSuchElementException("Cover letter not found."));
+    public void deleteCoverLetter(Long userId, Long resumeId) {
+        CoverLetter coverLetter =
+                coverLetterRepository.findByIdAndOwnerId(resumeId, userId)
+                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
-        if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Cover letter is not generated yet.");
-        }
-
-        coverLetter.setArchived(true);
-        coverLetterRepository.save(coverLetter);
+        coverLetterRepository.delete(coverLetter);
     }
 
+    // =================================================================================
+    // (5) 제목 수정
+    // =================================================================================
+    @Override
+    @Transactional
+    public void updateTitle(Long userId, Long resumeId, String newTitle) {
+        CoverLetter coverLetter =
+                coverLetterRepository.findByIdAndOwnerId(resumeId, userId)
+                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
+
+        coverLetter.updateTitle(newTitle);
+    }
+
+    // =================================================================================
+    // (5) 보관함 목록 조회 (vA 스타일 – status 포함)
+    // =================================================================================
     @Override
     public PageResponse<CoverLetterListItemResponse> getArchivedCoverLetters(
             Long userId,
@@ -140,14 +336,15 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         Page<CoverLetter> pageResult =
                 coverLetterRepository.findByOwnerIdAndArchivedTrue(userId, pageable);
 
-        var content = pageResult.getContent().stream()
-                .map(c -> new CoverLetterListItemResponse(
-                        c.getId(),
-                        c.getTitle(),
-                        c.getPreviewUrl(),
-                        c.getUpdatedAt()
-                ))
-                .collect(Collectors.toList());
+        // 생성자 순서: id, title, previewUrl, status, updatedAt
+        List<CoverLetterListItemResponse> content = pageResult.getContent().stream()
+        .map(c -> new CoverLetterListItemResponse(
+                c.getId(),
+                c.getTitle(),
+                c.getPreviewUrl(),
+                c.getUpdatedAt()
+        ))
+            .collect(Collectors.toList());
 
         return new PageResponse<>(
                 content,
@@ -158,233 +355,17 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         );
     }
 
-    // ===================== 초안 저장/수정 =====================
-
-    @Override
-    @Transactional
-    public Long saveOrUpdateCoverLetter(Long userId,
-                                        Long coverLetterId,
-                                        CoverLetterReqDto.SaveRequest request) {
-
-        if (coverLetterId == null) {
-            // 새로 생성 (POST)
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-            CoverLetter coverLetter = new CoverLetter();
-            coverLetter.setOwner(user);
-            coverLetter.updateContent(
-                    request.getTitle(),
-                    request.getTargetCompany(),
-                    request.getTargetJob(),
-                    request.getSections()
-            );
-            coverLetter.setStatus(CoverLetterStatus.PROCESSING);
-
-            return coverLetterRepository.save(coverLetter).getId();
-        } else {
-            // 수정 (PATCH)
-            CoverLetter coverLetter =
-                    coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
-                            .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
-
-            coverLetter.updateContent(
-                    request.getTitle(),
-                    request.getTargetCompany(),
-                    request.getTargetJob(),
-                    request.getSections()
-            );
-            return coverLetter.getId();
-        }
-    }
-
-    // ===================== 템플릿 선택 =====================
-
+    // =================================================================================
+    // 기타 유지 메서드들
+    // =================================================================================
     @Override
     @Transactional
     public void updateTemplate(Long userId, Long resumeId, String templateId) {
         CoverLetter coverLetter =
                 coverLetterRepository.findByIdAndOwnerId(resumeId, userId)
                         .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
-
         coverLetter.updateTemplate(templateId);
     }
-
-    // ===================== 구성 설정 저장 =====================
-
-    @Override
-    @Transactional
-    public void updateSettings(Long userId,
-                               Long coverLetterId,
-                               List<String> questions,
-                               String tone,
-                               Integer lengthPerQuestion) {
-
-        CoverLetter coverLetter =
-                coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
-                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
-
-        coverLetter.setQuestions(questions);
-        coverLetter.setTone(tone);
-        coverLetter.setLengthPerQuestion(lengthPerQuestion);
-    }
-
-    // ===================== 생성 요청 (AI 연동) =====================
-@Override
-@Transactional
-public void generateCoverLetter(Long userId, Long coverLetterId) {
-    // 1) 자소서 + 유저 검증
-    CoverLetter coverLetter = coverLetterRepository
-            .findByIdAndOwnerId(coverLetterId, userId)
-            .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
-
-    User user = userRepository.findById(userId)
-            .orElseThrow(() -> new NoSuchElementException("User not found"));
-
-    // 2) 상태를 PROCESSING 으로 변경
-    coverLetter.setStatus(CoverLetterStatus.PROCESSING);
-    coverLetterRepository.save(coverLetter);
-
-    // 3) AI 요청 DTO 구성
-    AiCoverLetterRequest req = new AiCoverLetterRequest();
-    Map<String, Object> sections = coverLetter.getSections();
-    ResumeData data = new ResumeData();
-
-    if (sections != null) {
-        // 🔹 profile (있으면 사용, 지금은 프론트에서 안보내지만 대비)
-        Object profileObj = sections.get("profile");
-        if (profileObj instanceof Map<?, ?>) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> profileMap = (Map<String, Object>) profileObj;
-            data.setProfile(profileMap);
-        }
-
-        // 🔹 experiences ← experiences | experience | educationExperience
-        Object expObj = sections.get("experiences");
-        if (expObj == null) expObj = sections.get("experience");
-        if (expObj == null) expObj = sections.get("educationExperience");
-
-        if (expObj instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> expList = (List<Map<String, Object>>) expObj;
-            data.setExperiences(expList);
-        }
-
-        // 🔹 projects ← projects | projectExperience
-        Object projObj = sections.get("projects");
-        if (projObj == null) projObj = sections.get("projectExperience");
-
-        if (projObj instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> projList = (List<Map<String, Object>>) projObj;
-            data.setProjects(projList);
-        }
-
-        // 🔹 activities ← activities | club | clubs
-        Object actObj = sections.get("activities");
-        if (actObj == null) actObj = sections.get("club");
-        if (actObj == null) actObj = sections.get("clubs");
-
-        if (actObj instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> actList = (List<Map<String, Object>>) actObj;
-            data.setActivities(actList);
-        }
-
-        // 🔹 awards ← awards
-        Object awardsObj = sections.get("awards");
-        if (awardsObj instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> awardsList = (List<Map<String, Object>>) awardsObj;
-            data.setAwards(awardsList);
-        }
-
-        // 🔹 skills ← skills | technicalSkills
-        Object skillsObj = sections.get("skills");
-        if (skillsObj == null) skillsObj = sections.get("technicalSkills");
-
-        if (skillsObj instanceof List<?>) {
-            List<?> rawList = (List<?>) skillsObj;
-
-            if (rawList.isEmpty() || rawList.get(0) instanceof String) {
-                // List<String>
-                @SuppressWarnings("unchecked")
-                List<String> skillNames = (List<String>) skillsObj;
-                data.setSkills(skillNames);
-            } else if (rawList.get(0) instanceof Map) {
-                // List<Map<String,Object>> 인 경우 → name 필드를 문자열로 뽑기 (나중 확장용)
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> skillMapList = (List<Map<String, Object>>) skillsObj;
-                List<String> names = skillMapList.stream()
-                        .map(m -> String.valueOf(m.getOrDefault("name", "")))
-                        .toList();
-                data.setSkills(names);
-            }
-        }
-    }
-
-    req.setData(data);
-
-    // 에세이 설정 (기존 로직 유지)
-    EssayConfig essay = new EssayConfig();
-    essay.setQuestion("지원 동기");
-    essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
-    essay.setLength(
-            coverLetter.getLengthPerQuestion() != null
-                    ? coverLetter.getLengthPerQuestion()
-                    : 1000
-    );
-    req.setEssay(essay);
-
-    // 4) AI 서버 호출
-    AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
-    String generatedText = (res != null) ? res.getCoverLetter() : null;
-
-    System.out.println("=== [SERVICE] generatedText = " + generatedText);
-
-    if (generatedText == null || generatedText.isBlank()) {
-        coverLetter.setStatus(CoverLetterStatus.FAILED);
-        coverLetterRepository.save(coverLetter);
-        throw new IllegalStateException("AI가 자소서를 생성하지 못했습니다.");
-    }
-
-    // 5) 결과 저장
-    Map<String, Object> updatedSections = coverLetter.getSections();
-    if (updatedSections == null) {
-        updatedSections = new HashMap<>();
-    }
-    updatedSections.put("generatedCoverLetter", generatedText);
-    coverLetter.setSections(updatedSections);
-
-    coverLetter.setStatus(CoverLetterStatus.SUCCESS);
-    coverLetterRepository.save(coverLetter);
-}
-
-    // ===================== 보관함: 문서 삭제 =====================
-
-    @Override
-    @Transactional
-    public void deleteCoverLetter(Long userId, Long resumeId) {
-        CoverLetter coverLetter =
-                coverLetterRepository.findByIdAndOwnerId(resumeId, userId)
-                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
-
-        coverLetterRepository.delete(coverLetter);
-    }
-
-    // ===================== 보관함: 제목 변경 =====================
-
-    @Override
-    @Transactional
-    public void updateTitle(Long userId, Long resumeId, String newTitle) {
-        CoverLetter coverLetter =
-                coverLetterRepository.findByIdAndOwnerId(resumeId, userId)
-                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
-
-        coverLetter.updateTitle(newTitle);
-    }
-
-    // ===================== 완성된 자소서 내용 수정 =====================
 
     @Override
     @Transactional
@@ -393,14 +374,19 @@ public void generateCoverLetter(Long userId, Long coverLetterId) {
                 coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
                         .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
-        // sections JSON 안의 "generatedCoverLetter"만 교체
         Map<String, Object> sections = coverLetter.getSections();
-        if (sections == null) {
-            sections = new HashMap<>();
-        }
+        if (sections == null) sections = new HashMap<>();
         sections.put("generatedCoverLetter", content);
         coverLetter.setSections(sections);
-
         coverLetterRepository.save(coverLetter);
+    }
+
+    @Override
+    @Transactional
+    public void archiveCoverLetter(Long coverLetterId, Long userId) {
+        CoverLetter coverLetter =
+                coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
+                        .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
+        coverLetter.setArchived(true);
     }
 }

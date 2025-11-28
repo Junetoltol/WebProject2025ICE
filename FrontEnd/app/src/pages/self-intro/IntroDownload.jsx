@@ -1,11 +1,12 @@
 // src/pages/self-intro/IntroDownload.jsx
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import Header from "../../components/Header";
 import { useLocation, useParams } from "react-router-dom";
 import {
   downloadCoverLetterFile,
   archiveCoverLetter,
+  getCoverLetterDraft,
 } from "../../api/selfIntro";
 
 const Wrap = styled.div`
@@ -129,12 +130,63 @@ export default function IntroDownload() {
   const userName = location.state?.userName || "OOO";
   const fileTitle = location.state?.title || "자기소개서";
 
-  // 미리보기 텍스트 (없으면 안내 문구)
-  const previewContent =
+  // 🔹 미리보기 텍스트 state
+  // 🔹 미리보기 텍스트 (state 우선, 없으면 안내 문구)
+  const [previewText, setPreviewText] = React.useState(
     location.state?.content ||
-    "AI가 생성한 자기소개서가 이 영역에 표시될 예정입니다.\n\n아직 실제 내용 연동이 안 되어 있다면, IntroLoading → IntroDownload로 넘어올 때 state에 { content }를 넘겨주세요.";
+      "AI가 생성한 자기소개서가 이 영역에 표시될 예정입니다.\n\n" +
+        "아직 실제 내용 연동이 안 되어 있다면, IntroLoading → IntroDownload로 넘어올 때 " +
+        "state에 { content }를 넘겨주세요."
+  );
 
+  // 🔹 컴포넌트 마운트 시 / coverLetterId 변경 시 서버에서 내용 조회
+  React.useEffect(() => {
+    if (!coverLetterId) return;
+
+    // 이미 location.state로 content가 넘어왔다면 추가 호출 안 함
+    if (location.state?.content) return;
+    const fetchPreview = async () => {
+      try {
+        // GET /api/cover-letters/{id}
+        const data = await getCoverLetterDraft(coverLetterId);
+
+        // ✅ 백엔드에서 content 필드를 내려주면 여기서 사용
+        if (data?.content) {
+          setPreviewText(data.content);
+        }
+        // 만약 나중에 sections 구조에서 조합해야 하면 여기에서 가공하면 됨.
+      } catch (e) {
+        console.error("자기소개서 미리보기 조회 실패", e);
+        // 실패해도 placeholder 그대로 둠
+      }
+    };
+
+    fetchPreview();
+  }, [coverLetterId, location.state]);
   const disabled = !coverLetterId;
+
+  // 🔹 컴포넌트 마운트 시 / coverLetterId 변경 시 미리보기 조회
+  useEffect(() => {
+    if (!coverLetterId) return;
+
+    // 이미 state로 content가 넘어왔다면 그걸 우선 사용
+    if (location.state?.content) return;
+
+    const fetchPreview = async () => {
+      try {
+        const data = await getSelfIntroPreview(coverLetterId);
+        // 백엔드에서 content(자소서 전체 텍스트)를 내려준다고 가정
+        if (data?.content) {
+          setPreviewText(data.content);
+        }
+      } catch (err) {
+        console.error("자소서 미리보기 조회 실패", err);
+        // 실패해도 placeholder 그대로 둠
+      }
+    };
+
+    fetchPreview();
+  }, [coverLetterId, location.state]);
 
   // ===== 실제 브라우저 다운로드 처리 함수 =====
   const triggerBrowserDownload = useCallback((blob, fileName) => {
@@ -183,7 +235,7 @@ export default function IntroDownload() {
   };
 
   return (
-    <>
+    <Wrap>
       <Header />
       <Wrap>
         <Container>
@@ -246,5 +298,31 @@ export default function IntroDownload() {
         </Container>
       </Wrap>
     </>
+      <Container>
+        <Box>
+          <Title>{fileTitle}가 완성되었어요!</Title>
+          <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
+
+          <PreviewWrap>
+            <ScrollPaper>
+              <PreviewText>{previewText}</PreviewText>
+            </ScrollPaper>
+          </PreviewWrap>
+
+          <BtnRow>
+            <Btn disabled={disabled} onClick={() => handleDownload("word")}>
+              word로 다운로드
+            </Btn>
+            <Btn disabled={disabled} onClick={() => handleDownload("pdf")}>
+              pdf로 다운로드
+            </Btn>
+          </BtnRow>
+
+          <WideBtn disabled={disabled} onClick={handleArchive}>
+            보관함에 저장
+          </WideBtn>
+        </Box>
+      </Container>
+    </Wrap>
   );
 }
