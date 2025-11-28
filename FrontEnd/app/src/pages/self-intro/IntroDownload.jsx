@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import Header from "../../components/Header";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   downloadCoverLetterFile,
   archiveCoverLetter,
@@ -122,6 +122,7 @@ const WideBtn = styled(Btn)`
 export default function IntroDownload() {
   const location = useLocation();
   const params = useParams();
+  const navigate = useNavigate();
 
   // 우선순위: state로 온 값 > URL 파라미터
   const coverLetterId =
@@ -141,7 +142,7 @@ export default function IntroDownload() {
     location.state?.content || placeholderText
   );
 
-  // 컴포넌트 마운트 시 / coverLetterId 변경 시 서버에서 내용 조회
+  // 🔹 컴포넌트 마운트 시 / coverLetterId 변경 시 서버에서 내용 조회
   useEffect(() => {
     if (!coverLetterId) return;
 
@@ -229,6 +230,7 @@ export default function IntroDownload() {
     }
   };
 
+  // ===== 보관함 저장 + 보관함 페이지 이동 =====
   const handleArchive = async () => {
     if (!coverLetterId) {
       alert("coverLetterId 정보가 없어 보관함에 저장할 수 없습니다.");
@@ -238,6 +240,9 @@ export default function IntroDownload() {
     try {
       await archiveCoverLetter(coverLetterId);
       alert("보관함에 저장되었습니다.");
+
+      // ✅ 보관함 페이지로 이동 (경로는 실제 라우터에 맞춰 수정)
+      navigate("/self-intro/store");
     } catch (err) {
       console.error(err);
       alert(err.message || "보관함 저장에 실패했습니다.");
@@ -249,10 +254,19 @@ export default function IntroDownload() {
       <Header />
       <Container>
         <Box>
-          <Title>
-            {userName} 님의 {fileTitle}가 완성되었어요!
-          </Title>
-          <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
+          <div
+            style={{
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+            }}
+          >
+            <Title>
+              {userName} 님의 {fileTitle}가 완성되었어요!
+            </Title>
+            <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
+          </div>
 
           <PreviewWrap>
             <ScrollPaper>
@@ -261,15 +275,39 @@ export default function IntroDownload() {
           </PreviewWrap>
 
           <BtnRow>
-            <Btn disabled={disabled} onClick={() => handleDownload("word")}>
+            <Btn
+              disabled={disabled}
+              onClick={() => handleDownload("word")}
+              title={
+                disabled
+                  ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                  : ""
+              }
+            >
               word로 다운로드
             </Btn>
-            <Btn disabled={disabled} onClick={() => handleDownload("pdf")}>
+            <Btn
+              disabled={disabled}
+              onClick={() => handleDownload("pdf")}
+              title={
+                disabled
+                  ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                  : ""
+              }
+            >
               pdf로 다운로드
             </Btn>
           </BtnRow>
 
-          <WideBtn disabled={disabled} onClick={handleArchive}>
+          <WideBtn
+            disabled={disabled}
+            onClick={handleArchive}
+            title={
+              disabled
+                ? "coverLetterId가 없어 보관함에 저장할 수 없습니다."
+                : ""
+            }
+          >
             보관함에 저장
           </WideBtn>
         </Box>
