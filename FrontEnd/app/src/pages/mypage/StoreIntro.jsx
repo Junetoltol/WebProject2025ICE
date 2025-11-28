@@ -205,7 +205,7 @@ export default function StoreIntro() {
           <Box>
             <BoxHeader>
               <TitleGroup>
-                <Title>{userName} 님의 자소서 보관함</Title>
+                <Title>자소서 보관함</Title>
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
 

@@ -1,5 +1,4 @@
 package com.jobbuddy.backend.service;
-
 // 만든놈 최은준
 
 import com.jobbuddy.backend.ai.AiCoverLetterClient;
@@ -47,27 +46,28 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         this.aiCoverLetterClient = aiCoverLetterClient;
     }
 
-    // ===================== 미리보기 =====================
-
+    // =================================================================================
+    // (1), (3), (5) 미리보기 조회 (인자 11개 맞춤)
+    // =================================================================================
     @Override
+    @Transactional(readOnly = true)
     public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
         CoverLetter coverLetter = coverLetterRepository
                 .findByIdAndOwnerId(coverLetterId, userId)
                 .orElseThrow(() ->
                         new NoSuchElementException("Cover letter not found."));
 
-        if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Cover letter is not generated yet.");
-        }
 
+        // 생성자 순서: id, title, questions, tone, length, status, previewUrl, sections, ownerName, createdAt, updatedAt
         return new CoverLetterPreviewResponse(
                 coverLetter.getId(),
                 coverLetter.getTitle(),
                 coverLetter.getQuestions(),
                 coverLetter.getTone(),
                 coverLetter.getLengthPerQuestion(),
-                coverLetter.getStatus().name(),
+                coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
                 coverLetter.getPreviewUrl(),
+                coverLetter.getSections(), // Map<String, Object>
                 coverLetter.getCreatedAt(),
                 coverLetter.getUpdatedAt()
         );
@@ -158,8 +158,9 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         );
     }
 
-    // ===================== 초안 저장/수정 =====================
-
+    // =================================================================================
+    // (1) 임시 저장
+    // =================================================================================
     @Override
     @Transactional
     public Long saveOrUpdateCoverLetter(Long userId,
@@ -167,7 +168,6 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                                         CoverLetterReqDto.SaveRequest request) {
 
         if (coverLetterId == null) {
-            // 새로 생성 (POST)
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -180,7 +180,6 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                     request.getSections()
             );
             coverLetter.setStatus(CoverLetterStatus.PROCESSING);
-
             return coverLetterRepository.save(coverLetter).getId();
         } else {
             // 수정 (PATCH)
@@ -298,6 +297,7 @@ public void generateCoverLetter(Long userId, Long coverLetterId) {
             List<Map<String, Object>> awardsList = (List<Map<String, Object>>) awardsObj;
             data.setAwards(awardsList);
         }
+    }
 
         // 🔹 skills ← skills | technicalSkills
         Object skillsObj = sections.get("skills");
@@ -360,8 +360,15 @@ public void generateCoverLetter(Long userId, Long coverLetterId) {
     coverLetterRepository.save(coverLetter);
 }
 
-    // ===================== 보관함: 문서 삭제 =====================
+        String fileContent = "제목: " + coverLetter.getTitle() + "\n\n" + content;
+        byte[] bytes = fileContent.getBytes(StandardCharsets.UTF_8);
 
+        return new ByteArrayResource(bytes);
+    }
+
+    // =================================================================================
+    // (5) 보관함 삭제
+    // =================================================================================
     @Override
     @Transactional
     public void deleteCoverLetter(Long userId, Long resumeId) {
@@ -372,8 +379,9 @@ public void generateCoverLetter(Long userId, Long coverLetterId) {
         coverLetterRepository.delete(coverLetter);
     }
 
-    // ===================== 보관함: 제목 변경 =====================
-
+    // =================================================================================
+    // (5) 제목 수정
+    // =================================================================================
     @Override
     @Transactional
     public void updateTitle(Long userId, Long resumeId, String newTitle) {
@@ -384,7 +392,52 @@ public void generateCoverLetter(Long userId, Long coverLetterId) {
         coverLetter.updateTitle(newTitle);
     }
 
-    // ===================== 완성된 자소서 내용 수정 =====================
+    // =================================================================================
+    // (5) 보관함 목록 조회 (인자 5개 맞춤 & 제네릭 명시)
+    // =================================================================================
+    @Override
+    public PageResponse<CoverLetterListItemResponse> getArchivedCoverLetters(Long userId, String q, String tone, String sort, int page, int size) {
+        Sort sortObj;
+        if (sort == null || sort.isBlank()) {
+            sortObj = Sort.by(Sort.Direction.DESC, "updatedAt");
+        } else {
+            String[] parts = sort.split(",");
+            String property = parts[0];
+            Sort.Direction direction = (parts.length > 1 && parts[1].equalsIgnoreCase("asc")) ? Sort.Direction.ASC : Sort.Direction.DESC;
+            sortObj = Sort.by(direction, property);
+        }
+
+        Pageable pageable = PageRequest.of(page, size, sortObj);
+        Page<CoverLetter> pageResult = coverLetterRepository.findByOwnerIdAndArchivedTrue(userId, pageable);
+
+        // 생성자 순서: id, title, previewUrl, status, updatedAt
+        List<CoverLetterListItemResponse> content = pageResult.getContent().stream()
+                .map(c -> new CoverLetterListItemResponse(
+                        c.getId(),
+                        c.getTitle(),
+                        c.getPreviewUrl(),
+                        c.getStatus() != null ? c.getStatus().name() : "PROCESSING",
+                        c.getUpdatedAt()
+                ))
+                .collect(Collectors.toList());
+
+        // [수정됨] 제네릭 타입 명시 (<CoverLetterListItemResponse>)
+        return new PageResponse<CoverLetterListItemResponse>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages()
+        );
+    }
+
+    // 기타 유지 메서드들
+    @Override
+    @Transactional
+    public void updateTemplate(Long userId, Long resumeId, String templateId) {
+        CoverLetter coverLetter = coverLetterRepository.findByIdAndOwnerId(resumeId, userId).orElseThrow();
+        coverLetter.updateTemplate(templateId);
+    }
 
     @Override
     @Transactional
@@ -395,12 +448,16 @@ public void generateCoverLetter(Long userId, Long coverLetterId) {
 
         // sections JSON 안의 "generatedCoverLetter"만 교체
         Map<String, Object> sections = coverLetter.getSections();
-        if (sections == null) {
-            sections = new HashMap<>();
-        }
+        if (sections == null) sections = new HashMap<>();
         sections.put("generatedCoverLetter", content);
         coverLetter.setSections(sections);
-
         coverLetterRepository.save(coverLetter);
+    }
+
+    @Override
+    @Transactional
+    public void archiveCoverLetter(Long coverLetterId, Long userId) {
+        CoverLetter coverLetter = coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId).orElseThrow();
+        coverLetter.setArchived(true);
     }
 }

@@ -196,7 +196,7 @@ export default function IntroDownload() {
                 gap: "20px",
               }}
             >
-              <Title>{userName} 님의 자소서가 완성되었어요 !</Title>
+              <Title>자소서가 완성되었어요 !</Title>
               <Sub>Word와 PDF로 다운받아 자유롭게 수정해 보세요.</Sub>
             </div>
 
