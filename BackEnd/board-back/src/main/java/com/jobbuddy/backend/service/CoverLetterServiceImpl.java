@@ -48,28 +48,28 @@ public class CoverLetterServiceImpl implements CoverLetterService {
     }
 
     // =================================================================================
-    // (1), (3), (5) 미리보기 조회 (vA 스타일 유지)
+    // (1), (3), (5) 미리보기 조회
+    //  - DTO 시그니처에 맞춰 sections 제외 (id, title, questions, tone, length, status, previewUrl, createdAt, updatedAt)
     // =================================================================================
-@Override
-@Transactional(readOnly = true)
-public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
-    CoverLetter coverLetter = coverLetterRepository
-            .findByIdAndOwnerId(coverLetterId, userId)
-            .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
+    @Override
+    @Transactional(readOnly = true)
+    public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
+        CoverLetter coverLetter = coverLetterRepository
+                .findByIdAndOwnerId(coverLetterId, userId)
+                .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
 
-    return new CoverLetterPreviewResponse(
-            coverLetter.getId(),
-            coverLetter.getTitle(),
-            coverLetter.getQuestions(),
-            coverLetter.getTone(),
-            coverLetter.getLengthPerQuestion(),
-            coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
-            coverLetter.getPreviewUrl(),
-            coverLetter.getCreatedAt(),
-            coverLetter.getUpdatedAt()
-    );
-}
-
+        return new CoverLetterPreviewResponse(
+                coverLetter.getId(),
+                coverLetter.getTitle(),
+                coverLetter.getQuestions(),
+                coverLetter.getTone(),
+                coverLetter.getLengthPerQuestion(),
+                coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
+                coverLetter.getPreviewUrl(),
+                coverLetter.getCreatedAt(),
+                coverLetter.getUpdatedAt()
+        );
+    }
 
     // =================================================================================
     // (1) 임시 저장
@@ -80,6 +80,7 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
                                         Long coverLetterId,
                                         CoverLetterReqDto.SaveRequest request) {
         if (coverLetterId == null) {
+            // 새로 생성
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -91,11 +92,13 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
                     request.getTargetJob(),
                     request.getSections()
             );
-            // vA: 새로 저장할 때 보관함에 바로 포함
+            // vA 정책: 새로 생성 시 바로 보관함 대상으로 취급
             coverLetter.setArchived(true);
             coverLetter.setStatus(CoverLetterStatus.PROCESSING);
+
             return coverLetterRepository.save(coverLetter).getId();
         } else {
+            // 수정
             CoverLetter coverLetter =
                     coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
                             .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
@@ -139,7 +142,7 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
                 .findByIdAndOwnerId(coverLetterId, userId)
                 .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
-        // vA 도메인 메서드 그대로 사용
+        // vA 도메인 메서드 사용: 상태를 PROCESSING 으로
         coverLetter.startProcessing();
         coverLetterRepository.save(coverLetter);
 
@@ -207,7 +210,7 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
                             List<String> skillNames = (List<String>) skillsObj;
                             data.setSkills(skillNames);
                         } else if (first instanceof Map<?, ?>) {
-                            // List<Map<String,Object>> → name 필드만 추출
+                            // List<Map<String,Object>> → name 필드 추출
                             @SuppressWarnings("unchecked")
                             List<Map<String, Object>> skillMapList = (List<Map<String, Object>>) skillsObj;
                             List<String> names = skillMapList.stream()
@@ -224,9 +227,11 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
             EssayConfig essay = new EssayConfig();
             essay.setQuestion("지원 동기");
             essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
-            essay.setLength(coverLetter.getLengthPerQuestion() != null
-                    ? coverLetter.getLengthPerQuestion()
-                    : 1000);
+            essay.setLength(
+                    coverLetter.getLengthPerQuestion() != null
+                            ? coverLetter.getLengthPerQuestion()
+                            : 1000
+            );
             req.setEssay(essay);
 
             AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
@@ -239,11 +244,10 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
 
             Map<String, Object> updatedSections = coverLetter.getSections();
             if (updatedSections == null) updatedSections = new HashMap<>();
-
             updatedSections.put("generatedCoverLetter", res.getCoverLetter());
             coverLetter.setSections(updatedSections);
 
-            // vA의 도메인 메서드 사용
+            // vA 도메인 메서드: SUCCESS 로 완료
             coverLetter.completeGeneration(null);
             coverLetterRepository.save(coverLetter);
 
@@ -255,7 +259,10 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
     }
 
     // =================================================================================
-    // (4) 다운로드 – vA 스타일 (내용 실제 포함, format은 아직 사용 안 함)
+    // (4) 다운로드 – vA + vB 합본
+    //  - 상태는 SUCCESS 여야 함
+    //  - format 검증(word/pdf)
+    //  - 실제 생성된 내용(generatedCoverLetter) 포함해서 파일 생성
     // =================================================================================
     @Override
     public Resource downloadCoverLetter(Long coverLetterId, String format, Long userId) {
@@ -265,6 +272,11 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
 
         if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
             throw new IllegalStateException("Not generated yet.");
+        }
+
+        String normalized = format == null ? "" : format.toLowerCase();
+        if (!normalized.equals("word") && !normalized.equals("pdf")) {
+            throw new IllegalArgumentException("Unsupported format.");
         }
 
         String content;
@@ -308,7 +320,8 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
     }
 
     // =================================================================================
-    // (5) 보관함 목록 조회 (vA 스타일 – status 포함)
+    // (5) 보관함 목록 조회
+    //  - DTO 시그니처에 맞춰 (id, title, previewUrl, updatedAt) 4개만 사용
     // =================================================================================
     @Override
     public PageResponse<CoverLetterListItemResponse> getArchivedCoverLetters(
@@ -337,15 +350,14 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
         Page<CoverLetter> pageResult =
                 coverLetterRepository.findByOwnerIdAndArchivedTrue(userId, pageable);
 
-        // 생성자 순서: id, title, previewUrl, status, updatedAt
         List<CoverLetterListItemResponse> content = pageResult.getContent().stream()
-        .map(c -> new CoverLetterListItemResponse(
-                c.getId(),
-                c.getTitle(),
-                c.getPreviewUrl(),
-                c.getUpdatedAt()
-        ))
-            .collect(Collectors.toList());
+                .map(c -> new CoverLetterListItemResponse(
+                        c.getId(),
+                        c.getTitle(),
+                        c.getPreviewUrl(),
+                        c.getUpdatedAt()
+                ))
+                .collect(Collectors.toList());
 
         return new PageResponse<>(
                 content,
