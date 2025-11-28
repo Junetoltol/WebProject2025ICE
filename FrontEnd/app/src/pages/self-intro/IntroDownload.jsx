@@ -124,7 +124,7 @@ export default function IntroDownload() {
   const params = useParams();
   const navigate = useNavigate();
 
-  // 🔹 우선순위: state로 온 값 > URL 파라미터
+  // 우선순위: state로 온 값 > URL 파라미터
   const coverLetterId =
     location.state?.coverLetterId || params.coverLetterId || null;
 
@@ -137,7 +137,7 @@ export default function IntroDownload() {
     "IntroLoading → IntroDownload로 넘어올 때\n" +
     "state에 { content }를 넘겨주세요.";
 
-  // 🔹 미리보기 텍스트 (state 우선, 없으면 안내 문구)
+  // 미리보기 텍스트 (state 우선, 없으면 안내 문구)
   const [previewText, setPreviewText] = useState(
     location.state?.content || placeholderText
   );
@@ -199,7 +199,7 @@ export default function IntroDownload() {
 
   const disabled = !coverLetterId;
 
-  // ===== 실제 브라우저 다운로드 처리 함수 =====
+  // 실제 브라우저 다운로드 처리 함수
   const triggerBrowserDownload = useCallback((blob, fileName) => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -211,7 +211,7 @@ export default function IntroDownload() {
     window.URL.revokeObjectURL(url);
   }, []);
 
-  // ===== word / pdf 공통 처리 =====
+  // word / pdf 공통 처리
   const handleDownload = async (format) => {
     if (!coverLetterId) {
       alert("coverLetterId 정보가 없어 파일을 다운로드할 수 없습니다.");
