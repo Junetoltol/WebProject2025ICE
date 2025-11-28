@@ -150,8 +150,7 @@ const DocDate = styled.div`
 `;
 
 export default function StoreIntro() {
-  const navigate = useNavigate();   // 🔥 추가
-
+  const navigate = useNavigate();   
   const docs = [
     { id: 1, title: "새문서 1", modified: "2025.01.01" },
     { id: 2, title: "새문서 2", modified: "2025.01.03" },
@@ -170,7 +169,7 @@ export default function StoreIntro() {
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
 
-              {/* 🔥 이동 기능 추가된 부분 */}
+              {/*이동 기능 추가된 부분 */}
               <NewButton onClick={() => navigate("/self-intro/Info")}>
                 새 자소서 작성하기
               </NewButton>
@@ -181,7 +180,6 @@ export default function StoreIntro() {
                 <DocCard key={doc.id}>
                   <DocThumbnail>
                     <Overlay className="overlay">
-                      <ActionButton variant="edit">수정</ActionButton>
                       <ActionButton variant="download">다운로드</ActionButton>
                       <ActionButton variant="delete">삭제하기</ActionButton>
                     </Overlay>

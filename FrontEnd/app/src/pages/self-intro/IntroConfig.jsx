@@ -4,30 +4,72 @@ import styled from "styled-components";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
-import { saveCoverLetterSettings } from "../../api/selfIntro";
+import {
+  saveCoverLetterSettings,
+  generateCoverLetter,
+} from "../../api/selfIntro";
 
 // 👉 명세의 예시와 완전히 같을 필요는 없지만 참고용
 const questionList = [
-  { title: "지원 동기", desc: "왜 이 회사/기관에 지원했는지, 어떤 계기와 목표가 있는지" },
-  { title: "본인의 강점 및 역량", desc: "자신이 가진 기술적 · 성격적 강점, 차별화된 경쟁력" },
-  { title: "협업 및 팀워크 경험", desc: "타인과 함께 목표를 달성했던 사례, 갈등 극복 경험" },
-  { title: "문제 해결 경험", desc: "예상치 못한 문제 상황에서 새로운 접근 방식으로 해결한 사례" },
-  { title: "실패 및 극복 경험", desc: "실패나 좌절을 경험한 사례와, 이를 어떻게 극복했는지" },
-  { title: "전공 및 학문적 경험", desc: "전공, 연구, 프로젝트 등에서 얻은 전문지식과 성과" },
-  { title: "입사 후 포부 / 비전", desc: "회사나 기관에서 이루고 싶은 목표와 본인의 기여 방안" },
+  {
+    title: "지원 동기",
+    desc: "왜 이 회사/기관에 지원했는지, 어떤 계기와 목표가 있는지",
+  },
+  {
+    title: "본인의 강점 및 역량",
+    desc: "자신이 가진 기술적 · 성격적 강점, 차별화된 경쟁력",
+  },
+  {
+    title: "협업 및 팀워크 경험",
+    desc: "타인과 함께 목표를 달성했던 사례, 갈등 극복 경험",
+  },
+  {
+    title: "문제 해결 경험",
+    desc: "예상치 못한 문제 상황에서 새로운 접근 방식으로 해결한 사례",
+  },
+  {
+    title: "실패 및 극복 경험",
+    desc: "실패나 좌절을 경험한 사례와, 이를 어떻게 극복했는지",
+  },
+  {
+    title: "전공 및 학문적 경험",
+    desc: "전공, 연구, 프로젝트 등에서 얻은 전문지식과 성과",
+  },
+  {
+    title: "입사 후 포부 / 비전",
+    desc: "회사나 기관에서 이루고 싶은 목표와 본인의 기여 방안",
+  },
 ];
 
 const toneList = [
-  { title: "전문적", desc: "신뢰감 있고 격식 있는 표현으로 전문성을 강조합니다." },
-  { title: "진솔한", desc: "솔직하고 담백한 어조로 경험과 진정성을 드러냅니다." },
-  { title: "열정적", desc: "적극적이고 도전적인 태도를 강조해 활기를 보여줍니다." },
-  { title: "협력적", desc: "따뜻하고 배려심 있는 분위기로 팀워크와 소통을 강조합니다." },
+  {
+    title: "전문적",
+    desc: "신뢰감 있고 격식 있는 표현으로 전문성을 강조합니다.",
+  },
+  {
+    title: "진솔한",
+    desc: "솔직하고 담백한 어조로 경험과 진정성을 드러냅니다.",
+  },
+  {
+    title: "열정적",
+    desc: "적극적이고 도전적인 태도를 강조해 활기를 보여줍니다.",
+  },
+  {
+    title: "협력적",
+    desc: "따뜻하고 배려심 있는 분위기로 팀워크와 소통을 강조합니다.",
+  },
 ];
 
 // SVG 커스텀 라디오/체크 스타일
 function RadioIcon({ checked }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21" fill="none">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="21"
+      height="21"
+      viewBox="0 0 21 21"
+      fill="none"
+    >
       <circle cx="10.5" cy="10.5" r="10" fill="white" stroke="#737171" />
       {checked && <circle cx="10.5" cy="10.5" r="7.5" fill="#00678C" />}
     </svg>
@@ -62,7 +104,9 @@ export default function IntroConfig() {
 
   const handleGenerate = async () => {
     if (!coverLetterId) {
-      alert("자소서 ID(coverLetterId)가 없습니다. 이전 페이지에서 제대로 넘어왔는지 확인해주세요.");
+      alert(
+        "자소서 ID(coverLetterId)가 없습니다. 이전 페이지에서 제대로 넘어왔는지 확인해주세요."
+      );
       return;
     }
 
@@ -80,22 +124,50 @@ export default function IntroConfig() {
     try {
       setSaving(true);
 
-      // 🔹 실제 API 호출 (토큰 포함, 예외 처리 모두 selfIntro.js에서 담당)
-      const result = await saveCoverLetterSettings(coverLetterId, payload);
-      // result.data = { coverLetterId, tone, lengthPerQuestion }
+      // 1️⃣ 자소서 설정 저장
+      const settingsResult = await saveCoverLetterSettings(
+        coverLetterId,
+        payload
+      );
+      // settingsResult.data = { coverLetterId, tone, lengthPerQuestion, ... }
 
-      // 필요하면 result.data를 다음 페이지에 함께 넘길 수도 있음
-      navigate("/self-intro/loading", {
-        state: {
-          coverLetterId: result.data.coverLetterId,
-          tone: result.data.tone,
-          lengthPerQuestion: result.data.lengthPerQuestion,
-          questions: payload.questions,
-        },
+      // 2️⃣ 자소서 생성 요청 (poll 모드)
+      const generateResult = await generateCoverLetter(coverLetterId, {
+        mode: "poll", // ?mode=poll 로 비동기 잡 요청
+        exportFormat: "word", // 결과 포맷 힌트 (다운로드용)
+        options: { includeEvidence: true },
       });
+
+      const genData = generateResult.data;
+      const status = genData.status; // "PROCESSING" | "SUCCESS" 등
+
+      // 3️⃣ 상태에 따라 이동
+      if (status === "SUCCESS") {
+        // 동기 모드이거나, 바로 성공 응답을 준 경우
+        navigate("/self-intro/download", {
+          state: {
+            coverLetterId: genData.coverLetterId,
+            previewUrl: genData.previewUrl, // 예: "/files/cover-7001.png"
+          },
+        });
+      } else if (status === "PROCESSING") {
+        // 비동기 잡으로 들어간 경우 → 로딩 화면으로
+        navigate("/self-intro/loading", {
+          state: {
+            coverLetterId: genData.coverLetterId,
+          },
+        });
+      } else {
+        // 혹시 모르는 값이면 일단 로딩 화면으로
+        navigate("/self-intro/loading", {
+          state: {
+            coverLetterId,
+          },
+        });
+      }
     } catch (err) {
       console.error(err);
-      alert(err.message || "자소서 설정 저장 중 오류가 발생했습니다.");
+      alert(err.message || "자소서 생성 요청 중 오류가 발생했습니다.");
     } finally {
       setSaving(false);
     }
@@ -112,7 +184,9 @@ export default function IntroConfig() {
           <CardQuestion>
             <CardTitleWrap>
               <SectionTitle>자기소개서 문항 입력</SectionTitle>
-              <CardSubTitle>자기소개서에 포함시킬 문항을 선택해주세요.</CardSubTitle>
+              <CardSubTitle>
+                자기소개서에 포함시킬 문항을 선택해주세요.
+              </CardSubTitle>
             </CardTitleWrap>
 
             <QuestionList>
@@ -277,6 +351,21 @@ const QuestionItem = styled.li`
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+
+  /* 부드러운 애니메이션 */
+  transition: background 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    border-color: #00678c;
+    background: #f5fbff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
 `;
 
 /* --- 텍스트 --- */
@@ -322,6 +411,21 @@ const ToneBox = styled.button`
   flex-direction: column;
   align-items: center;
   text-align: center;
+  cursor: pointer;
+
+  transition: background 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    border-color: #00678c;
+    background: #f5fbff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
 `;
 
 const ToneTitle = styled.div`
@@ -384,13 +488,26 @@ const BottomBtn = styled.button`
   border-radius: 12px;
   border: 1px solid #737171;
   background: #00678c;
-  color: #fff;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+  color: #ffffff;
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: #005574;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
+  }
 
   &:disabled {
     opacity: 0.7;
     cursor: default;
+    box-shadow: none;
   }
 `;
