@@ -3,7 +3,6 @@ package com.jobbuddy.backend.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 public class CoverLetterPreviewResponse {
 
@@ -14,13 +13,10 @@ public class CoverLetterPreviewResponse {
     private Integer lengthPerQuestion;
     private String status;
     private String previewUrl;
-    
-    private Map<String, Object> sections; 
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // 🔹 문항별 내용
+    // 🔹 문항별 내용 (미리보기용)
     private List<CoverLetterSectionDto> sections;
 
     public CoverLetterPreviewResponse() {
@@ -62,39 +58,78 @@ public class CoverLetterPreviewResponse {
         this.lengthPerQuestion = lengthPerQuestion;
         this.status = status;
         this.previewUrl = previewUrl;
-        this.sections = sections;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.sections = sections;
     }
 
-    // Getter/Setter
-    public Long getCoverLetterId() { return coverLetterId; }
-    public void setCoverLetterId(Long coverLetterId) { this.coverLetterId = coverLetterId; }
+    public Long getCoverLetterId() {
+        return coverLetterId;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public void setCoverLetterId(Long coverLetterId) {
+        this.coverLetterId = coverLetterId;
+    }
 
-    public List<String> getQuestions() { return questions; }
-    public void setQuestions(List<String> questions) { this.questions = questions; }
+    public String getTitle() {
+        return title;
+    }
 
-    public String getTone() { return tone; }
-    public void setTone(String tone) { this.tone = tone; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public Integer getLengthPerQuestion() { return lengthPerQuestion; }
-    public void setLengthPerQuestion(Integer lengthPerQuestion) { this.lengthPerQuestion = lengthPerQuestion; }
+    public List<String> getQuestions() {
+        return questions;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setQuestions(List<String> questions) {
+        this.questions = questions;
+    }
 
-    public String getPreviewUrl() { return previewUrl; }
-    public void setPreviewUrl(String previewUrl) { this.previewUrl = previewUrl; }
+    public String getTone() {
+        return tone;
+    }
 
-    public Map<String, Object> getSections() { return sections; }
-    public void setSections(Map<String, Object> sections) { this.sections = sections; }
+    public void setTone(String tone) {
+        this.tone = tone;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Integer getLengthPerQuestion() {
+        return lengthPerQuestion;
+    }
+
+    public void setLengthPerQuestion(Integer lengthPerQuestion) {
+        this.lengthPerQuestion = lengthPerQuestion;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getPreviewUrl() {
+        return previewUrl;
+    }
+
+    public void setPreviewUrl(String previewUrl) {
+        this.previewUrl = previewUrl;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
