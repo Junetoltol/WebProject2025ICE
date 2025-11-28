@@ -16,7 +16,7 @@ public class CoverLetterPreviewResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // 🔹 새로 추가: 문항별 내용
+    // 🔹 문항별 내용
     private List<CoverLetterSectionDto> sections;
 
     public CoverLetterPreviewResponse() {
