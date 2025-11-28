@@ -349,3 +349,50 @@ export async function archiveCoverLetter(coverLetterId) {
   // { code, message, data: { coverLetterId, archived: true } }
   return json.data;
 }
+// ===== 자소서 보관함 목록 조회 =====
+// GET /api/cover-letters/archived?page=0&size=10&q=&tone=&sort=updatedAt,desc
+export async function getCoverLetterArchive({
+  page = 0,
+  size = 10,
+  q = "",
+  tone = "",
+  sort = "updatedAt,desc",
+} = {}) {
+  if (!isLoggedIn()) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  let res;
+  try {
+    res = await api.get("/api/cover-letters/archived", {
+      params: { page, size, q, tone, sort },
+    });
+  } catch (err) {
+    if (!err.response) {
+      console.error("자소서 보관함 조회 네트워크 오류:", err);
+      throw new Error(
+        "서버에 연결할 수 없습니다. (네트워크/CORS 문제일 수 있습니다)"
+      );
+    }
+
+    const json = err.response.data ?? {};
+    const message =
+      json.message || "자소서 보관함 목록 조회에 실패했습니다.";
+
+    const error = new Error(message);
+    error.status = json.status ?? json.code ?? err.response.status;
+    error.data = json;
+    throw error;
+  }
+
+  const json = res.data ?? null;
+
+  if (!json || !json.data || !isSuccessCode(json.code)) {
+    throw new Error(
+      json?.message || "자소서 보관함 목록 조회에 실패했습니다."
+    );
+  }
+
+  // PageResponse<CoverLetterListItemResponse> 가 올 거라고 가정하고 data만 반환
+  return json.data;
+}
