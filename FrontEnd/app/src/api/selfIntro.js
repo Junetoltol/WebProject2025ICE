@@ -138,7 +138,6 @@ export async function updateCoverLetterDraft(coverLetterId, draftData) {
 
   return json;
 }
-
 /**
  * 자소서 생성 요청
  *
@@ -248,3 +247,13 @@ export async function getCoverLetterStatus(coverLetterId) {
   // json.data = { coverLetterId, title, status, previewUrl, ... }
   return json;
 }
+// GET /api/cover-letters/{coverLetterId} 
+export async function getCoverLetterDraft(coverLetterId) {
+  const res = await api.get(`/api/cover-letters/${coverLetterId}`);
+  const json = res.data ?? null;
+  if (!json || json.code !== "SU" || !json.data) {
+    throw new Error(json?.message || "자기소개서 조회에 실패했습니다.");
+  }
+  return json.data; // { title, targetCompany, targetJob, sections, ... }
+}
+
