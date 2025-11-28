@@ -232,7 +232,6 @@ export default function IntroInfo() {
               <CardHeaderLeft>
                 <CardTitle>주요 경험 입력</CardTitle>
               </CardHeaderLeft>
-              <SmallPillBtn type="button">기존 정보 불러오기</SmallPillBtn>
             </CardHeader>
 
             {/* 경력 / 인턴 / 아르바이트 경험 */}

@@ -49,7 +49,7 @@ export default function IntroConfig() {
   ]);
   const [selectedTone, setSelectedTone] = useState(toneList[0].title);
 
-  // 🔸 명세에 맞춰 600/1000/1500 중 하나로 맞춤
+  // 🔸 명세에 맞춰 500/1000/1500 중 하나로 맞춤
   const [selectedLength, setSelectedLength] = useState("1000");
 
   const [saving, setSaving] = useState(false);
@@ -74,7 +74,7 @@ export default function IntroConfig() {
     const payload = {
       questions: selectedQuestions,
       tone: selectedTone, // 예: "전문적", "진솔한" 등
-      lengthPerQuestion: Number(selectedLength), // 600 / 1000 / 1500
+      lengthPerQuestion: Number(selectedLength), // 500 / 1000 / 1500
     };
 
     try {
@@ -177,7 +177,7 @@ export default function IntroConfig() {
             <SectionTitle>자기소개서 문항 당 분량 설정</SectionTitle>
 
             <LengthOptions>
-              {["600", "1000", "1500"].map((len) => (
+              {["500", "1000", "1500"].map((len) => (
                 <LengthOption key={len}>
                   <RadioLabel>
                     <HiddenInput
