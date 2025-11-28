@@ -349,39 +349,3 @@ export async function archiveCoverLetter(coverLetterId) {
   // { code, message, data: { coverLetterId, archived: true } }
   return json.data;
 }
-
-/**
- * 자소서 보관함 목록 조회
- * GET /api/cover-letters
- *
- * 백엔드 응답:
- * {
- *   code: 200,
- *   message: "목록 조회 성공.",
- *   data: {
- *     content: [
- *       { id, title, updatedAt, ... },
- *       ...
- *     ],
- *     // 기타 페이지 정보들...
- *   }
- * }
- */
-export async function getCoverLetterArchive({ page = 0, size = 12 } = {}) {
-  if (!isLoggedIn()) {
-    throw new Error("로그인이 필요합니다.");
-  }
-
-  const res = await api.get("/api/cover-letters", {
-    params: { page, size },
-  });
-
-  const json = res.data;
-
-  if (!json || (json.code !== 200 && json.code !== "SU")) {
-    throw new Error(json?.message || "자소서 보관함 조회에 실패했습니다.");
-  }
-
-  // PageResponse<CoverLetterListItemResponse> 그대로 반환
-  return json.data;
-}
