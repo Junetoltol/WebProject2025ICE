@@ -455,34 +455,7 @@ export default function IntroInfo() {
                     </ComplexInputCell>
                   </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>수준</ComplexLabel>
-                    <ComplexInputCell>
-                      <TagRow>
-                        <TagBtn
-                          type="button"
-                          $active={skillLevel === "기본"}
-                          onClick={() => setSkillLevel("기본")}
-                        >
-                          기본
-                        </TagBtn>
-                        <TagBtn
-                          type="button"
-                          $active={skillLevel === "활용 가능"}
-                          onClick={() => setSkillLevel("활용 가능")}
-                        >
-                          활용 가능
-                        </TagBtn>
-                        <TagBtn
-                          type="button"
-                          $active={skillLevel === "심화"}
-                          onClick={() => setSkillLevel("심화")}
-                        >
-                          심화
-                        </TagBtn>
-                      </TagRow>
-                    </ComplexInputCell>
-                  </ComplexRow>
+                  
                 </WhiteCard>
               ))}
 

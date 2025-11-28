@@ -277,7 +277,23 @@ const QuestionItem = styled.li`
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+
+  /* 부드러운 애니메이션 */
+  transition: background 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    border-color: #00678C;
+    background: #f5fbff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
 `;
+
 
 /* --- 텍스트 --- */
 
@@ -322,7 +338,23 @@ const ToneBox = styled.button`
   flex-direction: column;
   align-items: center;
   text-align: center;
+  cursor: pointer;
+
+  transition: background 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    border-color: #00678C;
+    background: #f5fbff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
 `;
+
 
 const ToneTitle = styled.div`
   font-size: 16px;
@@ -384,13 +416,27 @@ const BottomBtn = styled.button`
   border-radius: 12px;
   border: 1px solid #737171;
   background: #00678c;
-  color: #fff;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+  color: #ffffff;
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    background: #005574;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
+  }
 
   &:disabled {
     opacity: 0.7;
     cursor: default;
+    box-shadow: none;
   }
 `;
+
