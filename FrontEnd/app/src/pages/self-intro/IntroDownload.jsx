@@ -1,7 +1,12 @@
 // src/pages/self-intro/IntroDownload.jsx
-import React from "react";
+import React, { useCallback } from "react";
 import styled from "styled-components";
 import Header from "../../components/Header";
+import { useLocation, useParams } from "react-router-dom";
+import {
+  downloadCoverLetterFile,
+  archiveCoverLetter,
+} from "../../api/selfIntro";
 
 const Wrap = styled.div`
   min-height: 100vh;
@@ -62,7 +67,6 @@ const ScrollPaper = styled.div`
   padding: 18px 14px;
   overflow-y: auto;
 
-  /* 스크롤 스타일 조금만 */
   &::-webkit-scrollbar {
     width: 5px;
   }
@@ -72,16 +76,12 @@ const ScrollPaper = styled.div`
   }
 `;
 
-const FakeText = styled.div`
-  height: 680px; /* 미리보기용 더미 높이 */
-  background: repeating-linear-gradient(
-    to bottom,
-    #f4f4f4 0px,
-    #f4f4f4 1px,
-    #ffffff 1px,
-    #ffffff 20px
-  );
-  border-radius: 4px;
+const PreviewText = styled.pre`
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: keep-all;
 `;
 
 const BtnRow = styled.div`
@@ -105,6 +105,12 @@ const Btn = styled.button`
   &:hover {
     background: #04506d;
   }
+
+  &:disabled {
+    background: #b7c3c9;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
 `;
 
 const WideBtn = styled(Btn)`
@@ -113,30 +119,129 @@ const WideBtn = styled(Btn)`
 `;
 
 export default function IntroDownload() {
+  const location = useLocation();
+  const params = useParams();
+
+  // 🔹 우선순위: state로 온 값 > URL 파라미터
+  const coverLetterId =
+    location.state?.coverLetterId || params.coverLetterId || null;
+
+  const userName = location.state?.userName || "OOO";
+  const fileTitle = location.state?.title || "자기소개서";
+
+  // 미리보기 텍스트 (없으면 안내 문구)
+  const previewContent =
+    location.state?.content ||
+    "AI가 생성한 자기소개서가 이 영역에 표시될 예정입니다.\n\n아직 실제 내용 연동이 안 되어 있다면, IntroLoading → IntroDownload로 넘어올 때 state에 { content }를 넘겨주세요.";
+
+  const disabled = !coverLetterId;
+
+  // ===== 실제 브라우저 다운로드 처리 함수 =====
+  const triggerBrowserDownload = useCallback((blob, fileName) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }, []);
+
+  // ===== word / pdf 공통 처리 =====
+  const handleDownload = async (format) => {
+    if (!coverLetterId) {
+      alert("coverLetterId 정보가 없어 파일을 다운로드할 수 없습니다.");
+      return;
+    }
+
+    try {
+      const { blob, fileName } = await downloadCoverLetterFile(
+        coverLetterId,
+        format
+      );
+      triggerBrowserDownload(blob, fileName);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "파일 다운로드에 실패했습니다.");
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!coverLetterId) {
+      alert("coverLetterId 정보가 없어 보관함에 저장할 수 없습니다.");
+      return;
+    }
+
+    try {
+      await archiveCoverLetter(coverLetterId);
+      alert("보관함에 저장되었습니다.");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "보관함 저장에 실패했습니다.");
+    }
+  };
+
   return (
     <>
       <Header />
       <Wrap>
         <Container>
           <Box>
-            <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "20px" }}>
-              <Title>OOO 님의 자소서가 완성되었어요 !</Title>
-              <Sub>word로 다운받아 수정할 수 있어요.</Sub>
+            <div
+              style={{
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+              }}
+            >
+              <Title>{userName} 님의 자소서가 완성되었어요 !</Title>
+              <Sub>Word와 PDF로 다운받아 자유롭게 수정해 보세요.</Sub>
             </div>
 
             <PreviewWrap>
               <ScrollPaper>
-                {/* 실제에선 여기에 자소서 내용 map으로 넣으면 됨 */}
-                <FakeText />
+                <PreviewText>{previewContent}</PreviewText>
               </ScrollPaper>
             </PreviewWrap>
 
             <BtnRow>
-              <Btn>word로 다운로드</Btn>
-              <Btn>pdf로 다운로드</Btn>
+              <Btn
+                onClick={() => handleDownload("word")}
+                disabled={disabled}
+                title={
+                  disabled
+                    ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                    : ""
+                }
+              >
+                word로 다운로드
+              </Btn>
+              <Btn
+                onClick={() => handleDownload("pdf")}
+                disabled={disabled}
+                title={
+                  disabled
+                    ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                    : ""
+                }
+              >
+                pdf로 다운로드
+              </Btn>
             </BtnRow>
 
-            <WideBtn>보관함에 저장</WideBtn>
+            <WideBtn
+              onClick={handleArchive}
+              disabled={disabled}
+              title={
+                disabled
+                  ? "coverLetterId가 없어 보관함에 저장할 수 없습니다."
+                  : ""
+              }
+            >
+              보관함에 저장
+            </WideBtn>
           </Box>
         </Container>
       </Wrap>
