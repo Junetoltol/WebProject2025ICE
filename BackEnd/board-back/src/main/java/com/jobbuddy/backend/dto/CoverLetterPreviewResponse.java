@@ -1,9 +1,8 @@
 package com.jobbuddy.backend.dto;
-// 만든놈 최은준
+//만든놈 최은준
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 public class CoverLetterPreviewResponse {
 
@@ -12,31 +11,23 @@ public class CoverLetterPreviewResponse {
     private List<String> questions;
     private String tone;
     private Integer lengthPerQuestion;
-    private String status;
+    private String status; // "SUCCESS" 같은 문자열
     private String previewUrl;
-    
-    // 이 두 개가 추가되어서 인자가 11개가 된 거야.
-    private Map<String, Object> sections; 
-    private String ownerName; 
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public CoverLetterPreviewResponse() {
     }
 
-    // 인자 11개짜리 생성자 (순서 정확히 맞춤)
     public CoverLetterPreviewResponse(Long coverLetterId,
-                                      String title,
-                                      List<String> questions,
-                                      String tone,
-                                      Integer lengthPerQuestion,
-                                      String status,
-                                      String previewUrl,
-                                      Map<String, Object> sections,
-                                      String ownerName,
-                                      LocalDateTime createdAt,
-                                      LocalDateTime updatedAt) {
+            String title,
+            List<String> questions,
+            String tone,
+            Integer lengthPerQuestion,
+            String status,
+            String previewUrl,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
         this.coverLetterId = coverLetterId;
         this.title = title;
         this.questions = questions;
@@ -44,43 +35,79 @@ public class CoverLetterPreviewResponse {
         this.lengthPerQuestion = lengthPerQuestion;
         this.status = status;
         this.previewUrl = previewUrl;
-        this.sections = sections;
-        this.ownerName = ownerName;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    // Getter/Setter
-    public Long getCoverLetterId() { return coverLetterId; }
-    public void setCoverLetterId(Long coverLetterId) { this.coverLetterId = coverLetterId; }
+    public Long getCoverLetterId() {
+        return coverLetterId;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public void setCoverLetterId(Long coverLetterId) {
+        this.coverLetterId = coverLetterId;
+    }
 
-    public List<String> getQuestions() { return questions; }
-    public void setQuestions(List<String> questions) { this.questions = questions; }
+    public String getTitle() {
+        return title;
+    }
 
-    public String getTone() { return tone; }
-    public void setTone(String tone) { this.tone = tone; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public Integer getLengthPerQuestion() { return lengthPerQuestion; }
-    public void setLengthPerQuestion(Integer lengthPerQuestion) { this.lengthPerQuestion = lengthPerQuestion; }
+    public List<String> getQuestions() {
+        return questions;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setQuestions(List<String> questions) {
+        this.questions = questions;
+    }
 
-    public String getPreviewUrl() { return previewUrl; }
-    public void setPreviewUrl(String previewUrl) { this.previewUrl = previewUrl; }
+    public String getTone() {
+        return tone;
+    }
 
-    public Map<String, Object> getSections() { return sections; }
-    public void setSections(Map<String, Object> sections) { this.sections = sections; }
+    public void setTone(String tone) {
+        this.tone = tone;
+    }
 
-    public String getOwnerName() { return ownerName; }
-    public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
+    public Integer getLengthPerQuestion() {
+        return lengthPerQuestion;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setLengthPerQuestion(Integer lengthPerQuestion) {
+        this.lengthPerQuestion = lengthPerQuestion;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getPreviewUrl() {
+        return previewUrl;
+    }
+
+    public void setPreviewUrl(String previewUrl) {
+        this.previewUrl = previewUrl;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

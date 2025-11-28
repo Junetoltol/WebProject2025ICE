@@ -5,9 +5,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
 import { createCoverLetterDraft, updateCoverLetterDraft } from "../../api/selfIntro"; // 자소서 초안 API
-import { createResumeDraft, updateResumeDraft } from "../../api/resume"; // 🔹 이력서 초안 API 추가
 import { getCoverLetterDraft } from "../../api/selfIntro"; //추가한놈 최은준
 
+// 달력 아이콘이 붙은 단일 date input
 // 달력 아이콘이 붙은 단일 date input
 function DateInputWithIcon({ placeholder }) {
   const inputRef = useRef(null);
@@ -23,17 +23,18 @@ function DateInputWithIcon({ placeholder }) {
   return (
     <DateField>
       <DateInput ref={inputRef} placeholder={placeholder} />
-      <CalendarIcon onClick={openPicker}>
+      {/* ❗️여기 'ㄹ' 문자 제거하고, 버튼으로 바꾸고 z-index 는 스타일에서 */}
+      <CalendarIcon type="button" onClick={openPicker}>
         <CalendarSvg />
       </CalendarIcon>
     </DateField>
   );
 }
 
+
 export default function IntroInfo() {
   const navigate = useNavigate();
   const location = useLocation();
-
 
 
   // ✅ 기본 정보 (API로 보낼 값들)
@@ -60,6 +61,27 @@ export default function IntroInfo() {
   const [awardIds, setAwardIds] = useState([0]);
   const [skillLevel, setSkillLevel] = useState("기본");
 
+   // ⬇⬇ 기존 자소서가 있는 경우, 한 번 불러와서 폼에 채우기 //최은준
+  useEffect(() => {
+    if (!initialCoverLetterId) return;
+
+    (async () => {
+      try {
+        const draft = await getCoverLetterDraft(initialCoverLetterId);
+        // API 응답 구조에 따라 id / coverLetterId 중 하나일 거라서 둘 다 체크
+        const loadedId = draft.coverLetterId ?? draft.id;
+        setCoverLetterId(loadedId);
+
+        setTitle(draft.title || "");
+        setTargetCompany(draft.targetCompany || "");
+        setTargetJob(draft.targetJob || "");
+        // sections 안의 세부 내용은 나중에 연결
+      } catch (e) {
+        console.error("자소서 초안 불러오기 실패:", e);
+      }
+    })();
+  }, [initialCoverLetterId]);
+
   // 공통 add / remove
   const addId = (setter) =>
     setter((prev) => [...prev, prev[prev.length - 1] + 1]);
@@ -68,119 +90,106 @@ export default function IntroInfo() {
     setter((prev) => prev.filter((x) => x !== id));
 
   // 🔹 임시 저장 → 자소서 초안 + 이력서 초안 함께 저장
-  const handleTempSave = async () => {
-    if (!title.trim()) {
-      alert("자기소개서 제목을 입력해 주세요.");
+// 🔹 임시 저장 → 자소서 초안 + 이력서 초안 함께 저장
+const handleTempSave = async () => {
+  if (!title.trim()) {
+    alert("자기소개서 제목을 입력해 주세요.");
+    return;
+  }
+
+  if (!targetCompany.trim() || !targetJob.trim()) {
+    if (
+      !window.confirm(
+        "회사명 또는 지원 직무가 비어 있습니다.\n그래도 임시 저장하시겠습니까?"
+      )
+    ) {
       return;
     }
+  }
 
-    if (!targetCompany.trim() || !targetJob.trim()) {
-      if (
-        !window.confirm(
-          "회사명 또는 지원 직무가 비어 있습니다.\n그래도 임시 저장하시겠습니까?"
-        )
-      ) {
-        return;
-      }
-    }
-
-    // ---- 1) 자기소개서 초안 payload (기존) ----
-    const coverLetterPayload = {
-      title: title || "",
-      targetCompany: targetCompany || "",
-      targetJob: targetJob || "",
-      sections: {
-        // TODO: 나중에 실제 입력값을 모두 연결할 수 있도록 확장
-        educationExperience: [], // 경력/인턴/알바, 교육 경험 등
-        projectExperience: [],
-        technicalSkills: [],
-        certifications: [],
-        awards: [],
-      },
-    };
-
-    // ---- 2) 이력서 초안 payload (API 명세서 형태) ----
-    // 지금은 UI가 아직 상태랑 안 묶여 있으니까,
-    // 명세에 맞는 기본 뼈대만 보내두고 나중에 값 채우면 됨.
-    const experienceList = []; // 경력/인턴/알바 데이터를 여기에 push 예정
-    const projectList = []; // 프로젝트 경험
-    const certList = []; // 자격증
-    const skillList = []; // 기술 스택
-    const clubList = []; // 교내/대외 활동
-    const awardList = []; // 수상 / 연구 성과
-
-    const resumePayload = {
-      // ✅ profile은 필수라서 기본 구조만이라도 채워서 보냄
-      profile: {
-        name: "", // TODO: /users/me/profile 이랑 연동해서 채우기
-        phone: "",
-        email: "",
-        address: "",
-        university: {
-          name: "",
-          major: "",
-        },
-      },
-
-      // 명세 JSON 예시에 맞춰서 작성
-      // (experience vs experiences, club vs clubs 둘 다 넣어줌)
-      experience: experienceList,
-      experiences: experienceList,
-
-      projects: projectList,
-      certifications: certList,
-
-      skills: skillList,
-
-      club: clubList,
-      clubs: clubList,
-
-      awards: awardList,
-    };
-
-    try {
-      setSaving(true);
-
-   // 1) 자기소개서 초안 저장/수정
-      let coverResult;
-      if (coverLetterId) {
-       // 이미 한 번 생성된 자소서라면 → PATCH /api/cover-letters/{id}
-      coverResult = await updateCoverLetterDraft(
-          coverLetterId,
-          coverLetterPayload
-      );
-    }else {
-      coverResult = await createCoverLetterDraft(coverLetterPayload);
-      }
-
-      const newCoverId = coverResult.data?.coverLetterId;
-      // 새로 생성된 경우든 수정이든, 응답의 id로 업데이트
-      if (newCoverId) {
-      setCoverLetterId(newCoverId);
-      }
-      // 2) 이력서 초안 저장 / 수정
-      let newResumeId = resumeId;
-
-      if (!resumeId) {
-        // 아직 이력서 초안이 없다면 -> POST /api/resumes
-        const resumeResult = await createResumeDraft(resumePayload);
-        newResumeId = resumeResult.data?.resumeId;
-      } else {
-        // 이미 한 번 만든 초안이 있으면 -> PATCH /api/resumes/{resumeId}
-        const resumeResult = await updateResumeDraft(resumeId, resumePayload);
-        newResumeId = resumeResult.data?.resumeId || resumeId;
-      }
-
-      setResumeId(newResumeId);
-
-      alert("자기소개서 · 이력서 초안이 임시 저장되었습니다.");
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "임시 저장 중 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
-    }
+  // ---- 1) 자기소개서 초안 payload (기존) ----
+  const coverLetterPayload = {
+    title: title || "",
+    targetCompany: targetCompany || "",
+    targetJob: targetJob || "",
+    sections: {
+      // TODO: 나중에 실제 입력값을 모두 연결할 수 있도록 확장
+      educationExperience: [], // 경력/인턴/알바, 교육 경험 등
+      projectExperience: [],
+      technicalSkills: [],
+      certifications: [],
+      awards: [],
+    },
   };
+
+  // ---- 2) 이력서 초안 payload (API 명세서 형태) ----
+  const experienceList = []; // 경력/인턴/알바
+  const projectList = []; // 프로젝트 경험
+  const certList = []; // 자격증
+  const skillList = []; // 기술 스택
+  const clubList = []; // 교내/대외 활동
+  const awardList = []; // 수상 / 연구 성과
+
+  const resumePayload = {
+    profile: {
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      university: {
+        name: "",
+        major: "",
+      },
+    },
+    experience: experienceList,
+    experiences: experienceList,
+    projects: projectList,
+    certifications: certList,
+    skills: skillList,
+    club: clubList,
+    clubs: clubList,
+    awards: awardList,
+  };
+
+try {
+  setSaving(true);
+
+  // 1) 자소서 초안 저장/수정
+  let coverData;
+  if (coverLetterId) {
+    // 이미 한 번 생성된 자소서라면 → PATCH /api/cover-letters/{id}
+    coverData = await updateCoverLetterDraft(coverLetterId, coverLetterPayload);
+  } else {
+    // 처음 생성 → POST /api/cover-letters
+    coverData = await createCoverLetterDraft(coverLetterPayload);
+  }
+
+  // coverData === { coverLetterId, title, resumeId, ... }
+  const newCoverId = coverData.coverLetterId ?? coverData.id;
+  const newResumeId = coverData.resumeId ?? resumeId;
+
+  console.log("임시 저장 후 coverLetterId:", newCoverId);
+  console.log("임시 저장 후 resumeId:", newResumeId);
+
+  if (!newCoverId) {
+    throw new Error("자소서 ID를 응답에서 찾을 수 없습니다.");
+  }
+
+  setCoverLetterId(newCoverId);
+  if (newResumeId) {
+    setResumeId(newResumeId);
+  }
+
+  alert("자기소개서 초안이 임시 저장되었습니다.");
+} catch (err) {
+  console.error(err);
+  alert(err.message || "임시 저장 중 오류가 발생했습니다.");
+} finally {
+  setSaving(false);
+}
+
+};
+
 
   // 🔹 다음 단계 → /self-intro/config 로 이동 (IntroConfig에서 설정 저장)
   const handleNext = () => {
@@ -1048,3 +1057,4 @@ const BottomBlueBtn = styled(BaseBottomBtn)`
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
   }
 `;
+
