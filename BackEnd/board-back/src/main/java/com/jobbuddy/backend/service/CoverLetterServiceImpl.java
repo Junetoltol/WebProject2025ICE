@@ -7,6 +7,7 @@ import com.jobbuddy.backend.ai.AiCoverLetterClient.AiCoverLetterRequest;
 import com.jobbuddy.backend.ai.AiCoverLetterClient.AiCoverLetterResponse;
 import com.jobbuddy.backend.ai.AiCoverLetterClient.EssayConfig;
 import com.jobbuddy.backend.ai.AiCoverLetterClient.ResumeData;
+import com.jobbuddy.backend.dto.CoverLetterSectionDto;
 import com.jobbuddy.backend.dto.CoverLetterListItemResponse;
 import com.jobbuddy.backend.dto.CoverLetterPreviewResponse;
 import com.jobbuddy.backend.dto.CoverLetterReqDto;
@@ -25,6 +26,23 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// DOCX (Apache POI)
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+
+// PDF (Apache PDFBox)
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+
+// 🔹 자바 기본 IO
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -47,29 +65,57 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         this.aiCoverLetterClient = aiCoverLetterClient;
     }
 
-    // =================================================================================
-    // (1), (3), (5) 미리보기 조회
-    //  - DTO 시그니처에 맞춰 sections 제외 (id, title, questions, tone, length, status, previewUrl, createdAt, updatedAt)
-    // =================================================================================
-    @Override
-    @Transactional(readOnly = true)
-    public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
-        CoverLetter coverLetter = coverLetterRepository
-                .findByIdAndOwnerId(coverLetterId, userId)
-                .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
+// =================================================================================
+// (1), (3), (5) 미리보기 조회
+//  - sections에 generatedCoverLetter까지 담아서 내려줌
+// =================================================================================
+@Override
+@Transactional(readOnly = true)
+public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
+    CoverLetter coverLetter = coverLetterRepository
+            .findByIdAndOwnerId(coverLetterId, userId)
+            .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
 
-        return new CoverLetterPreviewResponse(
-                coverLetter.getId(),
-                coverLetter.getTitle(),
-                coverLetter.getQuestions(),
-                coverLetter.getTone(),
-                coverLetter.getLengthPerQuestion(),
-                coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
-                coverLetter.getPreviewUrl(),
-                coverLetter.getCreatedAt(),
-                coverLetter.getUpdatedAt()
+    // 🔹 AI가 생성한 본문 꺼내기
+    String generated = null;
+    if (coverLetter.getSections() != null &&
+            coverLetter.getSections().containsKey("generatedCoverLetter")) {
+        generated = String.valueOf(
+                coverLetter.getSections().get("generatedCoverLetter")
         );
     }
+
+    // 🔹 섹션 DTO 리스트 만들기 (현재는 한 문항에 한 본문)
+    List<CoverLetterSectionDto> sectionDtos = null;
+    if (generated != null && !generated.isBlank()) {
+        String questionTitle = "자기소개서";
+        List<String> questions = coverLetter.getQuestions();
+        if (questions != null && !questions.isEmpty()) {
+            questionTitle = questions.get(0);
+        }
+
+        sectionDtos = List.of(
+                new CoverLetterSectionDto(
+                        questionTitle,
+                        generated
+                )
+        );
+    }
+
+    return new CoverLetterPreviewResponse(
+            coverLetter.getId(),
+            coverLetter.getTitle(),
+            coverLetter.getQuestions(),
+            coverLetter.getTone(),
+            coverLetter.getLengthPerQuestion(),
+            coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
+            coverLetter.getPreviewUrl(),
+            coverLetter.getCreatedAt(),
+            coverLetter.getUpdatedAt(),
+            sectionDtos   // 🔹 여기!
+    );
+}
+
 
     // =================================================================================
     // (1) 임시 저장
@@ -258,40 +304,103 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         }
     }
 
-    // =================================================================================
-    // (4) 다운로드 – vA + vB 합본
-    //  - 상태는 SUCCESS 여야 함
-    //  - format 검증(word/pdf)
-    //  - 실제 생성된 내용(generatedCoverLetter) 포함해서 파일 생성
-    // =================================================================================
-    @Override
-    public Resource downloadCoverLetter(Long coverLetterId, String format, Long userId) {
-        CoverLetter coverLetter = coverLetterRepository
-                .findByIdAndOwnerId(coverLetterId, userId)
-                .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
+// =================================================================================
+// (4) 다운로드 – 실제 DOCX / PDF 파일 생성
+// =================================================================================
+@Override
+public Resource downloadCoverLetter(Long coverLetterId, String format, Long userId) {
+    CoverLetter coverLetter = coverLetterRepository
+            .findByIdAndOwnerId(coverLetterId, userId)
+            .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
 
-        if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Not generated yet.");
-        }
-
-        String normalized = format == null ? "" : format.toLowerCase();
-        if (!normalized.equals("word") && !normalized.equals("pdf")) {
-            throw new IllegalArgumentException("Unsupported format.");
-        }
-
-        String content;
-        if (coverLetter.getSections() != null &&
-                coverLetter.getSections().containsKey("generatedCoverLetter")) {
-            content = String.valueOf(coverLetter.getSections().get("generatedCoverLetter"));
-        } else {
-            content = "내용이 없습니다.";
-        }
-
-        String fileContent = "제목: " + coverLetter.getTitle() + "\n\n" + content;
-        byte[] bytes = fileContent.getBytes(StandardCharsets.UTF_8);
-
-        return new ByteArrayResource(bytes);
+    if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
+        throw new IllegalStateException("Not generated yet.");
     }
+
+    String normalized = format == null ? "" : format.toLowerCase();
+    if (!normalized.equals("word") && !normalized.equals("pdf")) {
+        throw new IllegalArgumentException("Unsupported format.");
+    }
+
+    // 1) 내용 가져오기
+    String content;
+    if (coverLetter.getSections() != null &&
+            coverLetter.getSections().containsKey("generatedCoverLetter")) {
+        content = String.valueOf(coverLetter.getSections().get("generatedCoverLetter"));
+    } else {
+        content = "내용이 없습니다.";
+    }
+
+    String fileContent = "제목: " + coverLetter.getTitle() + "\n\n" + content;
+
+    // 2) 포맷별로 다른 바이트 생성
+    byte[] bytes;
+    if ("word".equals(normalized)) {
+        bytes = createDocxBytes(fileContent);
+    } else { // pdf
+        bytes = createPdfBytes(fileContent);
+    }
+
+    return new ByteArrayResource(bytes);
+}
+
+// ================== DOCX 생성 ==================
+private byte[] createDocxBytes(String text) {
+    try (XWPFDocument doc = new XWPFDocument();
+         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+        XWPFParagraph p = doc.createParagraph();
+        XWPFRun run = p.createRun();
+        run.setFontFamily("Malgun Gothic"); // 한글용
+        run.setFontSize(11);
+        run.setText(text);
+
+        doc.write(baos);
+        return baos.toByteArray();
+    } catch (IOException e) {
+        throw new IllegalStateException("Failed to generate DOCX", e);
+    }
+}
+
+// ================== PDF 생성 ==================
+private byte[] createPdfBytes(String text) {
+    try (PDDocument document = new PDDocument();
+         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+        PDPage page = new PDPage(PDRectangle.A4);
+        document.addPage(page);
+
+        // ★ 한글 지원 폰트 로드 (resources/fonts 안에 넣어둔 TTF)
+        InputStream fontStream =
+                getClass().getResourceAsStream("/fonts/NanumGothic.ttf");
+        if (fontStream == null) {
+            throw new IllegalStateException("Font file not found: /fonts/NanumGothic.ttf");
+        }
+        PDType0Font font = PDType0Font.load(document, fontStream, true);
+
+        try (PDPageContentStream contentStream =
+                     new PDPageContentStream(document, page)) {
+
+            contentStream.beginText();
+            contentStream.setFont(font, 11);
+            contentStream.setLeading(14.5f);
+            contentStream.newLineAtOffset(50, 750);
+
+            String[] lines = text.split("\\r?\\n");
+            for (String line : lines) {
+                contentStream.showText(line);
+                contentStream.newLine();
+            }
+
+            contentStream.endText(); // ★ 이거 꼭 있어야 경고 안 뜸
+        }
+
+        document.save(baos);
+        return baos.toByteArray();
+    } catch (IOException e) {
+        throw new IllegalStateException("Failed to generate PDF", e);
+    }
+}
 
     // =================================================================================
     // (5) 보관함 삭제

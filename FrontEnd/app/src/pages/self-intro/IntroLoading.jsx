@@ -78,19 +78,61 @@ export default function IntroLoading() {
     }
 
     let cancelled = false;
-
     const pollIntervalMs = 3000;
 
     async function pollOnce() {
       try {
         const res = await getCoverLetterStatus(coverLetterId);
+
         if (cancelled) return;
 
+        // getCoverLetterStatus 가 이미 data만 반환한다고 가정
         const data = res;
         const currentStatus = data.status; // "SUCCESS" | "PROCESSING" 등
 
+        // 디버깅용으로 한 번 확인해보고 sections 구조 맞추면 됨
+        // console.log("cover-letter status data:", data);
+
         if (currentStatus === "SUCCESS") {
           setStatus("SUCCESS");
+
+          // ✅ 여기에서 본문(content) 문자열을 만들어서 함께 넘긴다.
+          let content = "";
+
+          // 1) sections 배열이 있는 경우 (질문/답변 구조)
+          if (Array.isArray(data.sections)) {
+            content = data.sections
+              .map((section, idx) => {
+                if (!section) return "";
+
+                // 문자열이면 그대로 사용
+                if (typeof section === "string") return section;
+
+                const question =
+                  section.question ||
+                  section.title ||
+                  section.heading ||
+                  `문항 ${idx + 1}`;
+                const answer =
+                  section.answer ||
+                  section.content ||
+                  section.body ||
+                  section.text ||
+                  "";
+
+                if (question && answer) {
+                  return `Q${idx + 1}. ${question}\n${answer}`;
+                }
+                return answer || question || "";
+              })
+              .filter(Boolean)
+              .join("\n\n");
+          }
+          // 2) 혹시 data.content 라는 단일 문자열로 내려오면 그대로 사용
+          else if (typeof data.content === "string") {
+            content = data.content;
+          }
+
           // 완료되면 다운로드 페이지로 이동
           navigate("/self-intro/download", {
             replace: true,
@@ -98,6 +140,8 @@ export default function IntroLoading() {
               coverLetterId: data.coverLetterId,
               previewUrl: data.previewUrl, // "/files/cover-7001.png"
               title: data.title,
+              // ✅ IntroDownload에서 textarea에 뿌릴 본문
+              content,
             },
           });
         } else if (currentStatus === "PROCESSING") {
@@ -113,11 +157,12 @@ export default function IntroLoading() {
         if (cancelled) return;
 
         // 아직 미생성(409) → 계속 기다렸다가 다시 폴링
-        if (err.status === 409) {   // ✅ 이렇게
+        if (err.status === 409) {
           setStatus("PROCESSING");
           setTimeout(pollOnce, pollIntervalMs);
           return;
         }
+
         // 404, 401, 403 등은 에러로 노출
         console.error("자소서 상태 조회 실패:", err);
         setStatus("ERROR");

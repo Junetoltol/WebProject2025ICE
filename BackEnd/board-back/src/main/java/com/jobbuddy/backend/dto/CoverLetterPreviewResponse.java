@@ -1,5 +1,5 @@
 package com.jobbuddy.backend.dto;
-//만든놈 최은준
+// 만든놈 최은준
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,10 +16,15 @@ public class CoverLetterPreviewResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 🔹 새로 추가: 문항별 내용
+    private List<CoverLetterSectionDto> sections;
+
     public CoverLetterPreviewResponse() {
     }
 
-    public CoverLetterPreviewResponse(Long coverLetterId,
+    // 🔹 예전 코드와 호환용 생성자 (sections 없이)
+    public CoverLetterPreviewResponse(
+            Long coverLetterId,
             String title,
             List<String> questions,
             String tone,
@@ -27,7 +32,25 @@ public class CoverLetterPreviewResponse {
             String status,
             String previewUrl,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt
+    ) {
+        this(coverLetterId, title, questions, tone, lengthPerQuestion,
+                status, previewUrl, createdAt, updatedAt, null);
+    }
+
+    // 🔹 sections까지 포함한 생성자
+    public CoverLetterPreviewResponse(
+            Long coverLetterId,
+            String title,
+            List<String> questions,
+            String tone,
+            Integer lengthPerQuestion,
+            String status,
+            String previewUrl,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            List<CoverLetterSectionDto> sections
+    ) {
         this.coverLetterId = coverLetterId;
         this.title = title;
         this.questions = questions;
@@ -37,6 +60,7 @@ public class CoverLetterPreviewResponse {
         this.previewUrl = previewUrl;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.sections = sections;
     }
 
     public Long getCoverLetterId() {
@@ -109,5 +133,13 @@ public class CoverLetterPreviewResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<CoverLetterSectionDto> getSections() {
+        return sections;
+    }
+
+    public void setSections(List<CoverLetterSectionDto> sections) {
+        this.sections = sections;
     }
 }
