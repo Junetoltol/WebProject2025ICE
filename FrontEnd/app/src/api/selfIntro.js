@@ -195,11 +195,15 @@ export async function generateCoverLetter(coverLetterId, options = {}) {
   let res;
 
   try {
-    const params = {};
-    if (options.mode) params.mode = options.mode; // 예: "poll"
-    if (options.exportFormat) params.exportFormat = options.exportFormat; // 예: "word"
+    // 혹시라도 호출하는 쪽에서 undefined를 넘겼을 때를 한 번 더 방어
+    const safeOptions = options ?? {};
 
-    const body = options.body ?? {};
+    const params = {};
+    if (safeOptions.mode) params.mode = safeOptions.mode; // 예: "poll"
+    if (safeOptions.exportFormat)
+      params.exportFormat = safeOptions.exportFormat; // 예: "word"
+
+    const body = safeOptions.body ?? {};
 
     res = await api.post(
       `/api/cover-letters/${coverLetterId}/generate`,
@@ -258,8 +262,8 @@ export async function downloadCoverLetterFile(coverLetterId, format) {
   let res;
   try {
     res = await api.get(`/api/cover-letters/${coverLetterId}/download`, {
-      params: { format },          // ?format=word | pdf
-      responseType: "blob",        // 🔹 파일(이진 데이터)로 받기
+      params: { format }, // ?format=word | pdf
+      responseType: "blob", // 🔹 파일(이진 데이터)로 받기
     });
   } catch (err) {
     if (!err.response) {
