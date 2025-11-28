@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";   // 🔥 추가
+import { useNavigate } from "react-router-dom";
 import Header from "../../components/Header";
+import { isLoggedIn } from "../../api/auth";
+import { getCoverLetterArchive } from "../../api/selfIntro"; // ✅ 보관함 API 추가
 
 const Wrap = styled.div`
   min-height: 100vh;
@@ -99,7 +101,12 @@ const DocThumbnail = styled.div`
 const Overlay = styled.div`
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 103, 140, 0.40) 0%, rgba(0, 109, 148, 0.12) 100%), #FFF;
+  background: linear-gradient(
+      180deg,
+      rgba(0, 103, 140, 0.4) 0%,
+      rgba(0, 109, 148, 0.12) 100%
+    ),
+    #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,53 +156,94 @@ const DocDate = styled.div`
   color: #5a666d;
 `;
 
+// 날짜 포맷터: 2025-01-05T12:34:56 → 2025.01.05
+function formatDate(isoString) {
+  if (!isoString) return "-";
+  const d = new Date(isoString);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}.${mm}.${dd}`;
+}
+
 export default function StoreIntro() {
-  const navigate = useNavigate();   
+  const navigate = useNavigate();
 
- // 🔹 사용자 이름 상태 (ooo 대신 들어갈 곳)
- const [userName, setUserName] = useState("사용자");
+  // 🔹 사용자 이름 상태
+  const [userName, setUserName] = useState("사용자");
 
- // 🔹 자소서 목록 상태 (나중에 서버에서 받아오면 여기만 바꾸면 됨)
- const [docs, setDocs] = useState([
-   { id: 1, title: "새문서 1", modified: "2025.01.01" },
-   { id: 2, title: "새문서 2", modified: "2025.01.03" },
-   { id: 3, title: "새문서 3", modified: "2025.01.05" },
- ]);
+  // 🔹 자소서 목록 상태 (초기에는 새문서 1만 있는 빈 상태)
+  const [docs, setDocs] = useState([
+    { id: 1, title: "새문서 1", modified: "-" },
+  ]);
 
- // 🔹 로그인할 때 localStorage에 userName 저장해놨다고 가정
- useEffect(() => {
-   const savedName = localStorage.getItem("userName");
-   if (savedName) {
-     setUserName(savedName);
-   }
- }, []);
+  // ✅ 1) 페이지 진입 시 로그인 여부 확인
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      alert("로그인이 필요합니다. 로그인 페이지로 이동합니다.");
+      navigate("/login");
+    }
+  }, [navigate]);
 
- // ✅ 1) 자소서 열기 (제목/썸네일 클릭 시)
- const handleOpenDoc = (docId) => {
-   // 라우터 규칙에 맞게 경로는 바꿔도 됨!
-   navigate(`/self-intro/${docId}`);
- };
+  // 🔹 2) 사용자 이름 로컬스토리지에서 가져오기
+  useEffect(() => {
+    const savedName = localStorage.getItem("userName");
+    if (savedName) {
+      setUserName(savedName);
+    }
+  }, []);
 
- // ✅ 2) 삭제하기 (버튼 클릭 시)
- const handleDeleteDoc = (docId) => {
-   const ok = window.confirm("정말 이 자소서를 삭제할까요?");
-   if (!ok) return;
+  // ✅ 3) 보관함 목록 불러오기 (로그인 된 상태에서)
+  useEffect(() => {
+    const fetchDocs = async () => {
+      try {
+        const page = await getCoverLetterArchive({
+          page: 0,
+          size: 12,
+        });
 
-   // 화면에서 제거
-   setDocs((prev) => prev.filter((doc) => doc.id !== docId));
+        // page.content 안에 데이터가 있을 때만 목록으로 교체
+        if (page && Array.isArray(page.content) && page.content.length > 0) {
+          const mapped = page.content.map((item) => ({
+            id: item.id, // 또는 item.coverLetterId 등 실제 필드명에 맞게
+            title: item.title || "제목 없음",
+            modified: formatDate(item.updatedAt || item.createdAt),
+          }));
+          setDocs(mapped);
+        } else {
+          // 아무것도 없으면 기본 "새문서 1" 유지
+          setDocs([{ id: 1, title: "새문서 1", modified: "-" }]);
+        }
+      } catch (err) {
+        console.error("보관함 목록 조회 실패:", err);
+        // 실패해도 화면은 placeholder 유지
+      }
+    };
 
-   // TODO: 나중에 서버랑 연동할 때 여기서 삭제 API 호출하면 됨
- };
+    if (isLoggedIn()) {
+      fetchDocs();
+    }
+  }, []);
 
- // ✅ 3) 다운로드 (원하면 나중에 API 연결)
- const handleDownloadDoc = (docId) => {
-   console.log("다운로드 클릭:", docId);
-   // TODO: 파일 다운로드 API 연동 예정
- };
+  // ✅ 자소서 열기
+  const handleOpenDoc = (docId) => {
+    navigate(`/self-intro/${docId}`);
+  };
 
- 
+  // ✅ 삭제하기
+  const handleDeleteDoc = (docId) => {
+    const ok = window.confirm("정말 이 자소서를 삭제할까요?");
+    if (!ok) return;
 
+    setDocs((prev) => prev.filter((doc) => doc.id !== docId));
+    // TODO: DELETE /api/cover-letters/{coverLetterId} 연동
+  };
 
+  // ✅ 다운로드
+  const handleDownloadDoc = (docId) => {
+    console.log("다운로드 클릭:", docId);
+    // TODO: GET /api/cover-letters/{coverLetterId}/download 연동
+  };
 
   return (
     <>
@@ -205,11 +253,10 @@ export default function StoreIntro() {
           <Box>
             <BoxHeader>
               <TitleGroup>
-                <Title>{userName} 님의 자소서 보관함</Title>
+                <Title>자소서 보관함</Title>
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
 
-              {/*이동 기능 추가된 부분 */}
               <NewButton onClick={() => navigate("/self-intro/Info")}>
                 새 자소서 작성하기
               </NewButton>
@@ -218,34 +265,32 @@ export default function StoreIntro() {
             <CardRow>
               {docs.map((doc) => (
                 <DocCard key={doc.id}>
-                  {/* 썸네일을 클릭해도 해당 자소서로 이동 */}
-     <DocThumbnail onClick={() => handleOpenDoc(doc.id)}>
+                  <DocThumbnail onClick={() => handleOpenDoc(doc.id)}>
                     <Overlay className="overlay">
-                    <ActionButton
-                    variant="download"
-                     onClick={(e) => {
-                       e.stopPropagation();          // 썸네일 클릭 이벤트 막기
-                       handleDownloadDoc(doc.id);
-                     }}
-                   >
-                     다운로드
-                   </ActionButton>
-                   <ActionButton
-                     variant="delete"
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       handleDeleteDoc(doc.id);
-                     }}
-                   >
-                       삭제하기
-                   </ActionButton>  
+                      <ActionButton
+                        variant="download"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadDoc(doc.id);
+                        }}
+                      >
+                        다운로드
+                      </ActionButton>
+                      <ActionButton
+                        variant="delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDoc(doc.id);
+                        }}
+                      >
+                        삭제하기
+                      </ActionButton>
                     </Overlay>
                   </DocThumbnail>
-                    {/* 제목을 눌러도 이동되게 */}
-                   <DocName onClick={() => handleOpenDoc(doc.id)}>
+
+                  <DocName onClick={() => handleOpenDoc(doc.id)}>
                     {doc.title}
-                   </DocName>
-                  
+                  </DocName>
                   <DocDate>수정일자: {doc.modified}</DocDate>
                 </DocCard>
               ))}
