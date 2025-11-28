@@ -237,9 +237,70 @@ export default function IntroDownload() {
   return (
     <Wrap>
       <Header />
+      <Wrap>
+        <Container>
+          <Box>
+            <div
+              style={{
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+              }}
+            >
+              <Title>자소서가 완성되었어요 !</Title>
+              <Sub>Word와 PDF로 다운받아 자유롭게 수정해 보세요.</Sub>
+            </div>
+
+            <PreviewWrap>
+              <ScrollPaper>
+                <PreviewText>{previewContent}</PreviewText>
+              </ScrollPaper>
+            </PreviewWrap>
+
+            <BtnRow>
+              <Btn
+                onClick={() => handleDownload("word")}
+                disabled={disabled}
+                title={
+                  disabled
+                    ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                    : ""
+                }
+              >
+                word로 다운로드
+              </Btn>
+              <Btn
+                onClick={() => handleDownload("pdf")}
+                disabled={disabled}
+                title={
+                  disabled
+                    ? "coverLetterId가 없어 다운로드할 수 없습니다."
+                    : ""
+                }
+              >
+                pdf로 다운로드
+              </Btn>
+            </BtnRow>
+
+            <WideBtn
+              onClick={handleArchive}
+              disabled={disabled}
+              title={
+                disabled
+                  ? "coverLetterId가 없어 보관함에 저장할 수 없습니다."
+                  : ""
+              }
+            >
+              보관함에 저장
+            </WideBtn>
+          </Box>
+        </Container>
+      </Wrap>
+    </>
       <Container>
         <Box>
-          <Title>{userName} 님의 {fileTitle}가 완성되었어요!</Title>
+          <Title>{fileTitle}가 완성되었어요!</Title>
           <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
 
           <PreviewWrap>
