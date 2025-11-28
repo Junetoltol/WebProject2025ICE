@@ -1,5 +1,5 @@
 // src/pages/self-intro/IntroInfo.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef ,useEffect} from "react";
 import styled from "styled-components";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
@@ -1048,21 +1048,3 @@ const BottomBlueBtn = styled(BaseBottomBtn)`
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
   }
 `;
-//추가한놈 최은준, 임시저장 다시 보이기
-useEffect(() => {
-  if (!initialCoverLetterId) return;
-
-  (async () => {
-    try {
-      const draft = await getCoverLetterDraft(initialCoverLetterId);
-      setCoverLetterId(draft.id);
-      setTitle(draft.title || "");
-      setTargetCompany(draft.targetCompany || "");
-      setTargetJob(draft.targetJob || "");
-      // sections 안에 있는 값들도 나중에 연결 가능
-    } catch (e) {
-      console.error(e);
-      // 필요한 경우 에러 메시지 표시
-    }
-  })();
-}, [initialCoverLetterId]);
