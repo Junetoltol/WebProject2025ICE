@@ -47,7 +47,7 @@ public class CoverLetterServiceImpl implements CoverLetterService {
         this.aiCoverLetterClient = aiCoverLetterClient;
     }
 
-    // ===================== 미리보기 =====================
+    // ===================== 미리보기 & 임시저장 데이터 조회 =====================
 
     @Override
     public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long userId) {
@@ -56,9 +56,9 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 .orElseThrow(() ->
                         new NoSuchElementException("Cover letter not found."));
 
-        if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Cover letter is not generated yet.");
-        }
+        // 작성 중(PROCESSING)이거나 실패(FAILED)한 상태라도,
+        // 사용자가 입력했던 데이터(sections)는 다시 불러와야 수정이 가능하다.
+        // 따라서 상태 체크 예외 로직은 제거함.
 
         return new CoverLetterPreviewResponse(
                 coverLetter.getId(),
@@ -66,14 +66,15 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 coverLetter.getQuestions(),
                 coverLetter.getTone(),
                 coverLetter.getLengthPerQuestion(),
-                coverLetter.getStatus().name(),
+                coverLetter.getStatus() != null ? coverLetter.getStatus().name() : null,
                 coverLetter.getPreviewUrl(),
+                coverLetter.getSections(), // 저장된 JSON 데이터 반환
                 coverLetter.getCreatedAt(),
                 coverLetter.getUpdatedAt()
         );
     }
 
-    // ===================== 파일 다운로드 & 보관함 저장 =====================
+    // ===================== 파일 다운로드 =====================
 
     @Override
     public Resource downloadCoverLetter(Long coverLetterId, String format, Long userId) {
@@ -82,6 +83,7 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 .orElseThrow(() ->
                         new NoSuchElementException("Cover letter not found."));
 
+        // 다운로드는 완성된 것만 가능
         if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
             throw new IllegalStateException("Cover letter is not generated yet.");
         }
@@ -91,11 +93,14 @@ public class CoverLetterServiceImpl implements CoverLetterService {
             throw new IllegalArgumentException("Unsupported format.");
         }
 
+        // TODO: 실제 PDF/Word 변환 로직 연동 필요 (현재는 더미 데이터)
         String dummy = "Cover letter " + coverLetter.getId() + " (" + normalized + ")";
         byte[] bytes = dummy.getBytes(StandardCharsets.UTF_8);
 
         return new ByteArrayResource(bytes);
     }
+
+    // ===================== 보관함 저장 (이미 생성 시 저장되므로 사실상 업데이트 용도) =====================
 
     @Override
     @Transactional
@@ -105,13 +110,12 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 .orElseThrow(() ->
                         new NoSuchElementException("Cover letter not found."));
 
-        if (coverLetter.getStatus() != CoverLetterStatus.SUCCESS) {
-            throw new IllegalStateException("Cover letter is not generated yet.");
-        }
-
+        // 이미 생성 시 true로 들어가지만, 명시적인 보관함 저장 요청 시 사용
         coverLetter.setArchived(true);
         coverLetterRepository.save(coverLetter);
     }
+
+    // ===================== 보관함 목록 조회 =====================
 
     @Override
     public PageResponse<CoverLetterListItemResponse> getArchivedCoverLetters(
@@ -145,6 +149,7 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                         c.getId(),
                         c.getTitle(),
                         c.getPreviewUrl(),
+                        c.getStatus() != null ? c.getStatus().name() : "PROCESSING", // 상태값 추가
                         c.getUpdatedAt()
                 ))
                 .collect(Collectors.toList());
@@ -165,9 +170,8 @@ public class CoverLetterServiceImpl implements CoverLetterService {
     public Long saveOrUpdateCoverLetter(Long userId,
                                         Long coverLetterId,
                                         CoverLetterReqDto.SaveRequest request) {
-
         if (coverLetterId == null) {
-            // 새로 생성 (POST)
+            // [CREATE] 새로 생성
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -179,11 +183,14 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                     request.getTargetJob(),
                     request.getSections()
             );
+
+            // 임시 저장 즉시 파일 생성 (보관함 표시)
+            coverLetter.setArchived(true);
             coverLetter.setStatus(CoverLetterStatus.PROCESSING);
 
             return coverLetterRepository.save(coverLetter).getId();
         } else {
-            // 수정 (PATCH)
+            // [UPDATE] 수정
             CoverLetter coverLetter =
                     coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
                             .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
@@ -232,91 +239,76 @@ public class CoverLetterServiceImpl implements CoverLetterService {
     // ===================== 생성 요청 (AI 연동) =====================
 
     @Override
-    @Transactional
+    // 메서드 레벨 @Transactional 제거
+    // AI 호출 시간이 길어질 수 있으므로, DB 트랜잭션을 쪼개서 관리한다.
+    // 그래야 예외 발생 시 'FAILED' 상태 저장이 롤백되지 않는다.
     public void generateCoverLetter(Long userId, Long coverLetterId) {
-        // 1) 자소서 + 유저 검증
+
+        // 1) 엔티티 조회
         CoverLetter coverLetter = coverLetterRepository
                 .findByIdAndOwnerId(coverLetterId, userId)
                 .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
-
-        // 2) 상태를 PROCESSING 으로 변경
-        coverLetter.setStatus(CoverLetterStatus.PROCESSING);
+        // 2) 상태 변경 (PROCESSING) -> 즉시 커밋
+        coverLetter.startProcessing();
         coverLetterRepository.save(coverLetter);
 
-        // 3) AI 요청 DTO 구성
-        AiCoverLetterRequest req = new AiCoverLetterRequest();
+        try {
+            // 3) AI 요청 데이터 준비
+            AiCoverLetterRequest req = new AiCoverLetterRequest();
+            Map<String, Object> sections = coverLetter.getSections();
+            ResumeData data = new ResumeData();
 
-        // sections 에 이미 ResumeInput 구조 그대로 들어있다고 가정하고 ResumeData 로 복사
-        Map<String, Object> sections = coverLetter.getSections();
-        ResumeData data = new ResumeData();
+            // JSON 데이터를 ResumeData 객체로 매핑 (null safe 처리)
+            if (sections != null) {
+                if (sections.get("profile") instanceof Map)
+                    data.setProfile((Map<String, Object>) sections.get("profile"));
+                if (sections.get("experiences") instanceof List)
+                    data.setExperiences((List<Map<String, Object>>) sections.get("experiences"));
+                if (sections.get("projects") instanceof List)
+                    data.setProjects((List<Map<String, Object>>) sections.get("projects"));
+                if (sections.get("activities") instanceof List)
+                    data.setActivities((List<Map<String, Object>>) sections.get("activities"));
+                if (sections.get("awards") instanceof List)
+                    data.setAwards((List<Map<String, Object>>) sections.get("awards"));
+                if (sections.get("skills") instanceof List)
+                    data.setSkills((List<String>) sections.get("skills"));
+            }
+            req.setData(data);
 
-        if (sections != null) {
-            Object profile = sections.get("profile");
-            if (profile instanceof Map) {
-                //noinspection unchecked
-                data.setProfile((Map<String, Object>) profile);
-            }
-            Object experiences = sections.get("experiences");
-            if (experiences instanceof List) {
-                //noinspection unchecked
-                data.setExperiences((List<Map<String, Object>>) experiences);
-            }
-            Object projects = sections.get("projects");
-            if (projects instanceof List) {
-                //noinspection unchecked
-                data.setProjects((List<Map<String, Object>>) projects);
-            }
-            Object activities = sections.get("activities");
-            if (activities instanceof List) {
-                //noinspection unchecked
-                data.setActivities((List<Map<String, Object>>) activities);
-            }
-            Object awards = sections.get("awards");
-            if (awards instanceof List) {
-                //noinspection unchecked
-                data.setAwards((List<Map<String, Object>>) awards);
-            }
-            Object skills = sections.get("skills");
-            if (skills instanceof List) {
-                //noinspection unchecked
-                data.setSkills((List<String>) skills);
-            }
-        }
+            EssayConfig essay = new EssayConfig();
+            essay.setQuestion("지원 동기"); // TODO: 추후 questions 리스트 연동 가능
+            essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
+            essay.setLength(coverLetter.getLengthPerQuestion() != null ? coverLetter.getLengthPerQuestion() : 1000);
+            req.setEssay(essay);
 
-        req.setData(data);
+            // 4) AI 서버 호출 (DB 트랜잭션 밖에서 실행)
+            AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
 
-        EssayConfig essay = new EssayConfig();
-        // 질문 유형은 일단 기본값 "지원 동기" 로 고정 (나중에 필드 추가해서 바꿀 수 있음)
-        essay.setQuestion("지원 동기");
-        // 톤/분량은 엔티티 값 사용, 없으면 기본값
-        essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
-        essay.setLength(coverLetter.getLengthPerQuestion() != null ? coverLetter.getLengthPerQuestion() : 1000);
-        req.setEssay(essay);
+            if (res == null || res.getCoverLetter() == null) {
+                throw new IllegalStateException("AI returned empty result.");
+            }
 
-        // 4) AI 서버 호출
-        AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
+            // 5) 성공 처리 -> 다시 저장
+            // (트랜잭션 밖이라 엔티티가 detach 되었을 수 있으나 save 호출 시 merge 됨)
+            Map<String, Object> updatedSections = coverLetter.getSections();
+            if (updatedSections == null) {
+                updatedSections = new HashMap<>();
+            }
+            updatedSections.put("generatedCoverLetter", res.getCoverLetter());
+            coverLetter.setSections(updatedSections);
+            
+            coverLetter.completeGeneration(null); // previewUrl은 추후 생성되면 넣기
+            coverLetterRepository.save(coverLetter);
 
-        String generatedText = (res != null) ? res.getCoverLetter() : null;
-        System.out.println("=== [SERVICE] generatedText = " + generatedText);
-        if (generatedText == null || generatedText.isBlank()) {
+        } catch (Exception e) {
+            // 6) 실패 처리 -> 즉시 저장 (Rollback 되지 않음)
             coverLetter.setStatus(CoverLetterStatus.FAILED);
             coverLetterRepository.save(coverLetter);
-            throw new IllegalStateException("AI가 자소서를 생성하지 못했습니다.");
+            
+            // 컨트롤러나 상위 로직에 알리기 위해 예외를 다시 던짐
+            throw new RuntimeException("Cover letter generation failed", e);
         }
-
-        // 5) 결과를 sections JSON에 합쳐서 저장
-        Map<String, Object> updatedSections = coverLetter.getSections();
-        if (updatedSections == null) {
-            updatedSections = new HashMap<>();
-        }
-        updatedSections.put("generatedCoverLetter", generatedText);
-        coverLetter.setSections(updatedSections);
-
-        coverLetter.setStatus(CoverLetterStatus.SUCCESS);
-        coverLetterRepository.save(coverLetter);
     }
 
     // ===================== 보관함: 문서 삭제 =====================
@@ -352,7 +344,6 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 coverLetterRepository.findByIdAndOwnerId(coverLetterId, userId)
                         .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
-        // sections JSON 안의 "generatedCoverLetter"만 교체
         Map<String, Object> sections = coverLetter.getSections();
         if (sections == null) {
             sections = new HashMap<>();
