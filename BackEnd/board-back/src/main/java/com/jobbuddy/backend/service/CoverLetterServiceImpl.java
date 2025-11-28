@@ -56,7 +56,6 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 .findByIdAndOwnerId(coverLetterId, userId)
                 .orElseThrow(() -> new NoSuchElementException("Cover letter not found."));
 
-        String ownerName = coverLetter.getOwner().getName();
 
         // 생성자 순서: id, title, questions, tone, length, status, previewUrl, sections, ownerName, createdAt, updatedAt
         return new CoverLetterPreviewResponse(
@@ -68,7 +67,6 @@ public class CoverLetterServiceImpl implements CoverLetterService {
                 coverLetter.getStatus() != null ? coverLetter.getStatus().name() : "PROCESSING",
                 coverLetter.getPreviewUrl(),
                 coverLetter.getSections(), // Map<String, Object>
-                ownerName,                 // String
                 coverLetter.getCreatedAt(),
                 coverLetter.getUpdatedAt()
         );

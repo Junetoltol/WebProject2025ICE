@@ -15,9 +15,7 @@ public class CoverLetterPreviewResponse {
     private String status;
     private String previewUrl;
     
-    // 이 두 개가 추가되어서 인자가 11개가 된 거야. 
     private Map<String, Object> sections; 
-    private String ownerName; 
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -34,7 +32,6 @@ public class CoverLetterPreviewResponse {
                                       String status,
                                       String previewUrl,
                                       Map<String, Object> sections,
-                                      String ownerName,
                                       LocalDateTime createdAt,
                                       LocalDateTime updatedAt) {
         this.coverLetterId = coverLetterId;
@@ -45,7 +42,6 @@ public class CoverLetterPreviewResponse {
         this.status = status;
         this.previewUrl = previewUrl;
         this.sections = sections;
-        this.ownerName = ownerName;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -74,9 +70,6 @@ public class CoverLetterPreviewResponse {
 
     public Map<String, Object> getSections() { return sections; }
     public void setSections(Map<String, Object> sections) { this.sections = sections; }
-
-    public String getOwnerName() { return ownerName; }
-    public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
