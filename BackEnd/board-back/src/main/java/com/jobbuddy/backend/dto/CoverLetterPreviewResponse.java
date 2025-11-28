@@ -20,20 +20,41 @@ public class CoverLetterPreviewResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 🔹 문항별 내용
+    private List<CoverLetterSectionDto> sections;
+
     public CoverLetterPreviewResponse() {
     }
 
-    // 인자 11개짜리 생성자 (순서 정확히 맞춤)
-    public CoverLetterPreviewResponse(Long coverLetterId,
-                                      String title,
-                                      List<String> questions,
-                                      String tone,
-                                      Integer lengthPerQuestion,
-                                      String status,
-                                      String previewUrl,
-                                      Map<String, Object> sections,
-                                      LocalDateTime createdAt,
-                                      LocalDateTime updatedAt) {
+    // 🔹 예전 코드와 호환용 생성자 (sections 없이)
+    public CoverLetterPreviewResponse(
+            Long coverLetterId,
+            String title,
+            List<String> questions,
+            String tone,
+            Integer lengthPerQuestion,
+            String status,
+            String previewUrl,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this(coverLetterId, title, questions, tone, lengthPerQuestion,
+                status, previewUrl, createdAt, updatedAt, null);
+    }
+
+    // 🔹 sections까지 포함한 생성자
+    public CoverLetterPreviewResponse(
+            Long coverLetterId,
+            String title,
+            List<String> questions,
+            String tone,
+            Integer lengthPerQuestion,
+            String status,
+            String previewUrl,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            List<CoverLetterSectionDto> sections
+    ) {
         this.coverLetterId = coverLetterId;
         this.title = title;
         this.questions = questions;
@@ -44,6 +65,7 @@ public class CoverLetterPreviewResponse {
         this.sections = sections;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.sections = sections;
     }
 
     // Getter/Setter
@@ -74,6 +96,15 @@ public class CoverLetterPreviewResponse {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public List<CoverLetterSectionDto> getSections() {
+        return sections;
+    }
+
+    public void setSections(List<CoverLetterSectionDto> sections) {
+        this.sections = sections;
+    }
 }
