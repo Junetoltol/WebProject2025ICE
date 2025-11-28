@@ -240,3 +240,112 @@ export async function generateCoverLetter(coverLetterId, options = {}) {
 export async function getCoverLetterStatus(coverLetterId) {
   return await getCoverLetterDraft(coverLetterId);
 }
+
+// ===== 자소서 파일 다운로드 (word / pdf) =====
+export async function downloadCoverLetterFile(coverLetterId, format) {
+  if (!isLoggedIn()) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  if (!coverLetterId) {
+    throw new Error("coverLetterId가 필요합니다.");
+  }
+
+  if (!["word", "pdf"].includes(format)) {
+    throw new Error("지원하지 않는 다운로드 형식입니다.");
+  }
+
+  let res;
+  try {
+    res = await api.get(`/api/cover-letters/${coverLetterId}/download`, {
+      params: { format },          // ?format=word | pdf
+      responseType: "blob",        // 🔹 파일(이진 데이터)로 받기
+    });
+  } catch (err) {
+    if (!err.response) {
+      console.error("자소서 파일 다운로드 네트워크 오류:", err);
+      throw new Error(
+        "서버에 연결할 수 없습니다. (네트워크/CORS 문제일 수 있습니다)"
+      );
+    }
+
+    const status = err.response.status;
+
+    if (status === 409) {
+      throw new Error("아직 생성되지 않은 자기소개서입니다.");
+    } else if (status === 404) {
+      throw new Error("해당 자기소개서를 찾을 수 없습니다.");
+    } else if (status === 400) {
+      throw new Error("지원하지 않는 파일 형식입니다.");
+    } else if (status === 401 || status === 403) {
+      throw new Error("인증 정보가 없거나 권한이 없습니다.");
+    }
+
+    console.error("자소서 파일 다운로드 오류:", err);
+    throw new Error("파일 다운로드에 실패했습니다.");
+  }
+
+  const blob = res.data;
+  const disposition = res.headers["content-disposition"];
+  let fileName = `cover-letter-${coverLetterId}.${
+    format === "pdf" ? "pdf" : "docx"
+  }`;
+
+  // Content-Disposition 헤더에서 파일명 파싱
+  if (disposition) {
+    const match = disposition.match(/filename="(.+?)"/);
+    if (match && match[1]) {
+      fileName = decodeURIComponent(match[1]);
+    }
+  }
+
+  const contentType = res.headers["content-type"];
+
+  // 🔹 실제 파일 데이터와 파일명 반환
+  return { blob, fileName, contentType };
+}
+
+// ===== 자소서 보관함 저장 =====
+export async function archiveCoverLetter(coverLetterId) {
+  if (!isLoggedIn()) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  if (!coverLetterId) {
+    throw new Error("coverLetterId가 필요합니다.");
+  }
+
+  let res;
+  try {
+    res = await api.post(`/api/cover-letters/${coverLetterId}/archive`);
+  } catch (err) {
+    if (!err.response) {
+      console.error("보관함 저장 네트워크 오류:", err);
+      throw new Error(
+        "서버에 연결할 수 없습니다. (네트워크/CORS 문제일 수 있습니다)"
+      );
+    }
+
+    const status = err.response.status;
+    const json = err.response.data ?? {};
+    const message =
+      json.message ||
+      (status === 404
+        ? "해당 자기소개서를 찾을 수 없습니다."
+        : "보관함 저장에 실패했습니다.");
+
+    const error = new Error(message);
+    error.status = json.status ?? json.code ?? status;
+    error.data = json;
+    throw error;
+  }
+
+  const json = res.data ?? null;
+
+  if (!json || json.code !== 200) {
+    throw new Error(json?.message || "보관함 저장에 실패했습니다.");
+  }
+
+  // { code, message, data: { coverLetterId, archived: true } }
+  return json.data;
+}
