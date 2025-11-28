@@ -6,7 +6,7 @@ import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
 import {
   saveCoverLetterSettings,
-  generateCoverLetter,
+
 } from "../../api/selfIntro";
 
 // 👉 명세의 예시와 완전히 같을 필요는 없지만 참고용
