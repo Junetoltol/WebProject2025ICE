@@ -86,7 +86,7 @@ export default function IntroLoading() {
         const res = await getCoverLetterStatus(coverLetterId);
         if (cancelled) return;
 
-        const data = res.data;
+        const data = res;
         const currentStatus = data.status; // "SUCCESS" | "PROCESSING" 등
 
         if (currentStatus === "SUCCESS") {
@@ -113,12 +113,11 @@ export default function IntroLoading() {
         if (cancelled) return;
 
         // 아직 미생성(409) → 계속 기다렸다가 다시 폴링
-        if (err.httpStatus === 409) {
+        if (err.status === 409) {   // ✅ 이렇게
           setStatus("PROCESSING");
           setTimeout(pollOnce, pollIntervalMs);
           return;
         }
-
         // 404, 401, 403 등은 에러로 노출
         console.error("자소서 상태 조회 실패:", err);
         setStatus("ERROR");
