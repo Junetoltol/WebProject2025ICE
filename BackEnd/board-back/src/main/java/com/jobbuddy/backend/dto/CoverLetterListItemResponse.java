@@ -8,16 +8,24 @@ public class CoverLetterListItemResponse {
     private Long coverLetterId;
     private String title;
     private String previewUrl;
-    
-    // 상태값 추가 (PROCESSING, SUCCESS 등)
+
+    // 상태값 (PROCESSING, SUCCESS 등)
     private String status;
-    
+
     private LocalDateTime updatedAt;
 
     public CoverLetterListItemResponse() {
     }
 
-    // 인자 5개짜리 생성자
+    // 🔹 서비스에서 쓰던 4개짜리 생성자 (status는 null로 둠)
+    public CoverLetterListItemResponse(Long coverLetterId,
+                                       String title,
+                                       String previewUrl,
+                                       LocalDateTime updatedAt) {
+        this(coverLetterId, title, previewUrl, null, updatedAt);
+    }
+
+    // 🔹 5개짜리 생성자 (status까지 직접 지정)
     public CoverLetterListItemResponse(Long coverLetterId,
                                        String title,
                                        String previewUrl,
