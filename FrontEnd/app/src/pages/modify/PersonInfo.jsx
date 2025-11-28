@@ -16,22 +16,6 @@ const Global = createGlobalStyle`
   }
 `;
 
-/* 돋보기 아이콘 */
-const SearchSvg = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="14"
-    height="14"
-    viewBox="0 0 14 14"
-    fill="none"
-  >
-    <path
-      d="M5.62119 11.2418C6.86837 11.2415 8.07962 10.824 9.06206 10.0558L12.1509 13.1444L13.1444 12.151L10.0556 9.06227C10.8243 8.07979 11.2421 6.86833 11.2424 5.62089C11.2424 2.52167 8.72057 0 5.62119 0C2.52181 0 0 2.52167 0 5.62089C0 8.7201 2.52181 11.2418 5.62119 11.2418ZM5.62119 1.40522C7.94625 1.40522 9.83708 3.29595 9.83708 5.62089C9.83708 7.94583 7.94625 9.83655 5.62119 9.83655C3.29612 9.83655 1.4053 7.94583 1.4053 5.62089C1.4053 3.29595 3.29612 1.40522 5.62119 1.40522Z"
-      fill="#737171"
-    />
-  </svg>
-);
-
 export default function PersonInfo() {
   // ====== 상태 관리 (이름 / 학교 / 전공 + 에러/성공 메시지) ======
   const [name, setName] = useState("");
@@ -132,18 +116,14 @@ export default function PersonInfo() {
               <SubText>자기소개서 작성 시 활용됩니다.</SubText>
             </LabelRow>
 
-            <InputWrap>
-              <Input
-                placeholder="학교 검색"
-                style={{ paddingRight: 38 }}
-                value={univ}
-                onChange={(e) => setUniv(e.target.value)}
-              />
-              <SearchIcon type="button">
-                <SearchSvg />
-              </SearchIcon>
-            </InputWrap>
+            <Input
+              placeholder="학교 이름 입력"
+              value={univ}
+              onChange={(e) => setUniv(e.target.value)}
+              style={{ marginTop: 6 }}  // 기존 InputWrap의 margin-top 보정
+            />
           </Field>
+
 
           {/* 전공 */}
           <Field style={{ marginTop: 14 }}>
