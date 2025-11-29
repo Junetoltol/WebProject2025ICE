@@ -124,12 +124,16 @@ export default function IntroDownload() {
   const params = useParams();
   const navigate = useNavigate();
 
-  // 우선순위: state로 온 값 > URL 파라미터
-  const coverLetterId =
-    location.state?.coverLetterId || params.coverLetterId || null;
+// 우선순위: state로 온 값 > 로컬스토리지 > 기본값
+const coverLetterId =
+  location.state?.coverLetterId || params.coverLetterId || null;
 
-  const userName = location.state?.userName || "OOO";
-  const fileTitle = location.state?.title || "자기소개서";
+const userName =
+  location.state?.userName ||
+  localStorage.getItem("userName") ||
+  "사용자";
+
+const fileTitle = location.state?.title || "자기소개서";
 
   const placeholderText =
     "AI가 생성한 자기소개서가 이 영역에 표시될 예정입니다.\n\n" +
@@ -263,7 +267,7 @@ export default function IntroDownload() {
             }}
           >
             <Title>
-              {userName} 님의 {fileTitle}가 완성되었어요!
+              {fileTitle}가 완성되었어요!
             </Title>
             <Sub>Word와 PDF로 다운로드 받아 자유롭게 수정해 보세요.</Sub>
           </div>
