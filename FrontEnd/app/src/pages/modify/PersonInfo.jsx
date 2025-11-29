@@ -1,5 +1,5 @@
 // src/pages/modify/PersonInfo.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // 🔹 useEffect 추가
 import styled, { createGlobalStyle } from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
@@ -27,6 +27,14 @@ export default function PersonInfo() {
 
   const navigate = useNavigate();
 
+  // 🔐 페이지 진입 시 로그인 여부 먼저 확인 (로그인 안 되어 있으면 이 페이지에 못 들어오게)
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      alert("로그인이 필요합니다.");
+      navigate("/login");
+    }
+  }, [navigate]);
+
   // ====== 저장하기 버튼 클릭 핸들러 ======
   const handleSave = async () => {
     if (loading) return;
@@ -34,7 +42,7 @@ export default function PersonInfo() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    // 🔐 로그인 여부 확인
+    // 🔐 로그인 여부 확인 (버튼 클릭 시에도 한 번 더 방어)
     if (!isLoggedIn()) {
       setErrorMsg("로그인 정보가 없습니다. 다시 로그인 해주세요.");
       navigate("/login");
@@ -120,10 +128,9 @@ export default function PersonInfo() {
               placeholder="학교 이름 입력"
               value={univ}
               onChange={(e) => setUniv(e.target.value)}
-              style={{ marginTop: 6 }}  // 기존 InputWrap의 margin-top 보정
+              style={{ marginTop: 6 }} // 기존 InputWrap의 margin-top 보정
             />
           </Field>
-
 
           {/* 전공 */}
           <Field style={{ marginTop: 14 }}>
