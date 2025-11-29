@@ -1,3 +1,4 @@
+// src/pages/self-intro/StoreIntro.jsx
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
@@ -6,7 +7,8 @@ import { isLoggedIn } from "../../api/auth";
 import {
   getCoverLetterArchive,
   deleteCoverLetter,
-} from "../../api/selfIntro"; // ✅ 보관함 + 삭제 API
+  downloadCoverLetter, // ✅ 다운로드 API 추가
+} from "../../api/selfIntro";
 
 const Wrap = styled.div`
   min-height: 100vh;
@@ -229,8 +231,9 @@ export default function StoreIntro() {
     }
   }, []);
 
-  // ✅ 자소서 열기
+  // ✅ 자소서 열기 (수정 페이지로 이동)
   const handleOpenDoc = (docId) => {
+    // 수정 페이지: /self-intro/:coverLetterId
     navigate(`/self-intro/${docId}`);
   };
 
@@ -257,9 +260,23 @@ export default function StoreIntro() {
   };
 
   // ✅ 다운로드
-  const handleDownloadDoc = (docId) => {
-    console.log("다운로드 클릭:", docId);
-    // TODO: GET /api/cover-letters/{coverLetterId}/download 연동
+  const handleDownloadDoc = async (docId) => {
+    try {
+      // 기본은 word로 다운로드, 필요하면 "pdf"로 바꿔도 됨
+      const { blob, filename } = await downloadCoverLetter(docId, "word");
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("자소서 다운로드 실패:", err);
+      alert(err.message || "자소서 다운로드 중 오류가 발생했습니다.");
+    }
   };
 
   return (
@@ -270,7 +287,8 @@ export default function StoreIntro() {
           <Box>
             <BoxHeader>
               <TitleGroup>
-                <Title>자소서 보관함</Title>
+                {/* ✅ 000 부분에 사용자 이름 넣기 */}
+                <Title>{userName}님의 자소서 보관함</Title>
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
 
@@ -293,6 +311,19 @@ export default function StoreIntro() {
                       >
                         다운로드
                       </ActionButton>
+
+                      {/* ✅ 수정하기 버튼 추가 */}
+                      <ActionButton
+                        variant="edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDoc(doc.id);
+                        }}
+                      >
+                        {/*
+                        수정하기
+                      </ActionButton>
+
                       <ActionButton
                         variant="delete"
                         onClick={(e) => {
@@ -300,6 +331,7 @@ export default function StoreIntro() {
                           handleDeleteDoc(doc.id);
                         }}
                       >
+                      */}
                         삭제하기
                       </ActionButton>
                     </Overlay>
