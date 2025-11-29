@@ -6,14 +6,18 @@ import com.jobbuddy.backend.dto.CoverLetterPreviewResponse;
 import com.jobbuddy.backend.dto.CoverLetterReqDto;
 import com.jobbuddy.backend.dto.PageResponse;
 import com.jobbuddy.backend.service.CoverLetterService;
+import com.jobbuddy.backend.repository.UserRepository;
+import com.jobbuddy.backend.model.User;
+
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-import com.jobbuddy.backend.repository.UserRepository;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -33,18 +37,30 @@ public class CoverLetterController {
         this.userRepository = userRepository;
     }
 
-    // ===== 공통: Authentication -> userId(Long) 변환 =====
+    // ===== 공통: Authentication -> userId(Long) 변환 (정식용) =====
     private Long getUserId(Authentication authentication) {
-        if (authentication == null) {
-            throw new SecurityException("Unauthorized");
+
+        // 1) 인증 정보 자체가 없거나, anonymous 인 경우 → 401
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken
+                || "anonymousUser".equals(authentication.getName())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "로그인이 필요합니다."
+            );
         }
 
-        // 토큰에 들어있는 값 = username (지금 JTT 같은 값)
+        // 2) 정상적인 JWT 인증이 된 경우 → username 으로 User 조회
         String username = authentication.getName();
 
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User not found: " + username))
-                .getId();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "사용자를 찾을 수 없습니다: " + username
+                ));
+
+        return user.getId();
     }
 
     // ===== 1. 자소서 초안 작성 (POST /api/cover-letters) =====
@@ -152,8 +168,7 @@ public class CoverLetterController {
                         Map.of("coverLetterId", coverLetterId, "status", "PROCESSING")));
     }
 
-    // ===== 6. 파일 다운로드 (GET
-    // /api/cover-letters/{coverLetterId}/download?format=pdf|word) =====
+    // ===== 6. 파일 다운로드 (GET /api/cover-letters/{coverLetterId}/download?format=pdf|word) =====
     @GetMapping("/{coverLetterId}/download")
     public ResponseEntity<Resource> downloadCoverLetter(
             Authentication authentication,
@@ -210,8 +225,8 @@ public class CoverLetterController {
             @RequestParam(defaultValue = "12") int size) {
         Long userId = getUserId(authentication);
 
-        PageResponse<CoverLetterListItemResponse> response = coverLetterService.getArchivedCoverLetters(userId, q, tone,
-                sort, page, size);
+        PageResponse<CoverLetterListItemResponse> response =
+                coverLetterService.getArchivedCoverLetters(userId, q, tone, sort, page, size);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(200, "목록 조회 성공.", response));
