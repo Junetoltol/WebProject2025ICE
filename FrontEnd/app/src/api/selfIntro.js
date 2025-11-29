@@ -444,3 +444,76 @@ export async function deleteCoverLetter(coverLetterId) {
 
   return true;
 }
+/**
+ * 자소서 파일 다운로드
+ * GET /api/cover-letters/{coverLetterId}/download?format=word|pdf
+ *
+ * @param {number|string} coverLetterId
+ * @param {"word"|"pdf"} format
+ * @returns {Promise<{ blob: Blob, filename: string }>}
+ */
+export async function downloadCoverLetter(coverLetterId, format = "word") {
+  if (!isLoggedIn()) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  try {
+    const res = await api.get(
+      `/api/cover-letters/${coverLetterId}/download`,
+      {
+        params: { format },
+        responseType: "blob", // 🔹 파일 바이너리로 받기
+      }
+    );
+
+    // 기본 파일명
+    let filename =
+      format === "pdf"
+        ? `cover-letter-${coverLetterId}.pdf`
+        : `cover-letter-${coverLetterId}.docx`;
+
+    // Content-Disposition 헤더에서 파일명 추출 시도
+    const disposition = res.headers["content-disposition"];
+    if (disposition) {
+      const match =
+        /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(disposition);
+      const encoded = match?.[1] || match?.[2];
+      if (encoded) {
+        try {
+          filename = decodeURIComponent(encoded);
+        } catch {
+          filename = encoded;
+        }
+      }
+    }
+
+    return { blob: res.data, filename };
+  } catch (err) {
+    console.error("파일 다운로드 API 오류:", err);
+
+    if (err.response && err.response.data) {
+      try {
+        // 백엔드가 JSON 에러를 내려주는 경우
+        const reader = new FileReader();
+        return await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            try {
+              const json = JSON.parse(reader.result);
+              reject(new Error(json.message || "파일 다운로드 중 오류가 발생했습니다."));
+            } catch {
+              reject(new Error("파일 다운로드 중 오류가 발생했습니다."));
+            }
+          };
+          reader.onerror = () => {
+            reject(new Error("파일 다운로드 중 오류가 발생했습니다."));
+          };
+          reader.readAsText(err.response.data);
+        });
+      } catch {
+        throw new Error("파일 다운로드 중 오류가 발생했습니다.");
+      }
+    }
+
+    throw new Error("파일 다운로드 중 네트워크 오류가 발생했습니다.");
+  }
+}
