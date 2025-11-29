@@ -6,7 +6,7 @@ import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
 import {
   saveCoverLetterSettings,
-  generateCoverLetter,   // 🔹 이 줄 추가
+  generateCoverLetter,
 } from "../../api/selfIntro";
 
 // 👉 명세의 예시와 완전히 같을 필요는 없지만 참고용
@@ -90,10 +90,7 @@ export default function IntroConfig() {
     questionList[0].title,
   ]);
   const [selectedTone, setSelectedTone] = useState(toneList[0].title);
-
-  // 🔸 명세에 맞춰 500/1000/1500 중 하나로 맞춤
-  const [selectedLength, setSelectedLength] = useState("1000");
-
+  const [selectedLength, setSelectedLength] = useState("1000"); // 500/1000/1500
   const [saving, setSaving] = useState(false);
 
   const toggleQuestion = (title) => {
@@ -124,52 +121,32 @@ export default function IntroConfig() {
     try {
       setSaving(true);
 
-      // 1️⃣ 자소서 설정 저장
-      const settingsResult = await saveCoverLetterSettings(
-        coverLetterId,
-        payload
-      );
-      // settingsResult.data = { coverLetterId, tone, lengthPerQuestion, ... }
+      // 1️⃣ 자소서 설정 저장까지는 기다린다.
+      await saveCoverLetterSettings(coverLetterId, payload);
 
-      // 2️⃣ 자소서 생성 요청 (poll 모드)
-      const generateResult = await generateCoverLetter(coverLetterId, {
-        mode: "poll", // ?mode=poll 로 비동기 잡 요청
-        exportFormat: "word", // 결과 포맷 힌트 (다운로드용)
-        options: { includeEvidence: true },
+      // 2️⃣ 설정 저장이 끝났으면 버튼 상태 원복
+      setSaving(false);
+
+      // 3️⃣ 곧바로 로딩 화면으로 이동 (여기서 coverLetterId를 넘겨줌)
+      navigate("/self-intro/loading", {
+        state: {
+          coverLetterId,
+        },
       });
 
-      const genData = generateResult.data;
-      const status = genData.status; // "PROCESSING" | "SUCCESS" 등
-
-      // 3️⃣ 상태에 따라 이동
-      if (status === "SUCCESS") {
-        // 동기 모드이거나, 바로 성공 응답을 준 경우
-        navigate("/self-intro/download", {
-          state: {
-            coverLetterId: genData.coverLetterId,
-            previewUrl: genData.previewUrl, // 예: "/files/cover-7001.png"
-          },
-        });
-      } else if (status === "PROCESSING") {
-        // 비동기 잡으로 들어간 경우 → 로딩 화면으로
-        navigate("/self-intro/loading", {
-          state: {
-            coverLetterId: genData.coverLetterId,
-          },
-        });
-      } else {
-        // 혹시 모르는 값이면 일단 로딩 화면으로
-        navigate("/self-intro/loading", {
-          state: {
-            coverLetterId,
-          },
-        });
-      }
+      // 4️⃣ 그리고 뒤에서 비동기로 생성 요청만 던져둔다. (await 안 함)
+      generateCoverLetter(coverLetterId, {
+        mode: "poll", // 백엔드 쪽에서 활용 가능
+        exportFormat: "word",
+        options: { includeEvidence: true },
+      }).catch((err) => {
+        console.error("자소서 생성 요청 실패:", err);
+        // 필요하면 여기서 토스트/알럿 띄우는 로직도 추가 가능
+      });
     } catch (err) {
       console.error(err);
-      alert(err.message || "자소서 생성 요청 중 오류가 발생했습니다.");
-    } finally {
       setSaving(false);
+      alert(err.message || "자소서 생성 요청 중 오류가 발생했습니다.");
     }
   };
 

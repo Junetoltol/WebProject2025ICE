@@ -67,6 +67,9 @@ export default function IntroLoading() {
   // IntroConfig → navigate("/self-intro/loading", { state: { coverLetterId } })
   const coverLetterId = location.state?.coverLetterId ?? null;
 
+  // 디버깅용 로그
+  console.log("IntroLoading coverLetterId:", coverLetterId);
+
   const [status, setStatus] = useState("PROCESSING"); // PROCESSING | SUCCESS | ERROR
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -86,12 +89,8 @@ export default function IntroLoading() {
 
         if (cancelled) return;
 
-        // getCoverLetterStatus 가 이미 data만 반환한다고 가정
-        const data = res;
+        const data = res; // getCoverLetterStatus 가 data만 반환
         const currentStatus = data.status; // "SUCCESS" | "PROCESSING" 등
-
-        // 디버깅용으로 한 번 확인해보고 sections 구조 맞추면 됨
-        // console.log("cover-letter status data:", data);
 
         if (currentStatus === "SUCCESS") {
           setStatus("SUCCESS");
@@ -140,8 +139,7 @@ export default function IntroLoading() {
               coverLetterId: data.coverLetterId,
               previewUrl: data.previewUrl, // "/files/cover-7001.png"
               title: data.title,
-              // ✅ IntroDownload에서 textarea에 뿌릴 본문
-              content,
+              content, // ✅ IntroDownload에서 textarea에 뿌릴 본문
             },
           });
         } else if (currentStatus === "PROCESSING") {
