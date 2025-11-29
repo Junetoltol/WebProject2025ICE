@@ -3,6 +3,7 @@ package com.jobbuddy.backend.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -10,9 +11,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.Customizer;
 
-// ⬇⬇ CORS 관련 import 추가
+// CORS 관련
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,47 +30,51 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // 🔹 CORS를 Security에서 활성화 (아래 corsConfigurationSource()를 사용)
+                // 🔹 CORS 설정
                 .cors(Customizer.withDefaults())
+                // 🔹 CSRF 비활성화 (SPA + JWT 조합이니까)
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // 🔹 세션을 상태 없이(JWT만 사용)
+                .sessionManagement(sm ->
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                // 🔹 URL 별 권한
                 .authorizeHttpRequests(auth -> auth
+                        // 회원가입 / 로그인 / 아이디 중복 체크는 무조건 열어둠
                         .requestMatchers(
                                 "/api/auth/signup",
                                 "/api/auth/login",
-                                "/api/auth/id")
-                        .permitAll()
+                                "/api/auth/id"
+                        ).permitAll()
 
-                        // 🔽 자소서 API는 일단 전부 허용 (개발용)
+                        // ✅ 자소서 API : 지금은 개발 편하게 전부 허용
+                        //    (JWT 없어도 통과되게)
                         .requestMatchers("/api/cover-letters/**").permitAll()
+
+                        // 프로필 조회도 일단 열어둠
                         .requestMatchers("/api/users/me/profile").permitAll()
 
-                        // 나머지는 토큰 필수
-                        .anyRequest().authenticated())
+                        // 그 외 나머지 API는 로그인 필요
+                        .anyRequest().authenticated()
+                )
+                // 🔹 JWT 필터는 맨 앞단에 배치
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // 🔹 여기서 실제 CORS 허용 범위를 지정
+    // 🔹 CORS 범위 지정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
         // 프론트 주소 허용 (Vite dev 서버)
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-
-        // 허용할 HTTP 메서드
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // 요청 헤더 전부 허용
         config.setAllowedHeaders(List.of("*"));
-
-        // 쿠키/Authorization 헤더 허용 (JWT 쓸 때 보통 true)
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(true); // Authorization, 쿠키 허용
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // 모든 경로에 위 설정 적용
         source.registerCorsConfiguration("/**", config);
 
         return source;

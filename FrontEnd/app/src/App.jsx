@@ -32,7 +32,8 @@ export default function App() {
         <Route path="/modify/PersonInfo" element={<PersonInfo />} />
         <Route path="/modify/Password" element={<Password />} />
 
-        <Route path="/mypage/store-intro" element={<StoreIntro />} />
+<Route path="/mypage/store-intro" element={<StoreIntro />} />
+<Route path="/self-intro/store" element={<StoreIntro />} />  {/* 🔹 이 줄 추가 */}
 
         <Route path="/self-intro/config" element={<IntroConfig />} />
         <Route path="/self-intro/download" element={<IntroDownload />} />

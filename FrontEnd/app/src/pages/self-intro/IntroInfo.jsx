@@ -1,15 +1,17 @@
 // src/pages/self-intro/IntroInfo.jsx
-import React, { useState, useRef ,useEffect} from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header, { HEADER_H } from "../../components/Header";
 import Background from "../../components/Background";
-import { createCoverLetterDraft, updateCoverLetterDraft } from "../../api/selfIntro"; // 자소서 초안 API
-import { getCoverLetterDraft } from "../../api/selfIntro"; //추가한놈 최은준
+import {
+  createCoverLetterDraft,
+  updateCoverLetterDraft,
+  getCoverLetterDraft,
+} from "../../api/selfIntro";
 
 // 달력 아이콘이 붙은 단일 date input
-// 달력 아이콘이 붙은 단일 date input
-function DateInputWithIcon({ placeholder }) {
+function DateInputWithIcon({ placeholder, value, onChange }) {
   const inputRef = useRef(null);
 
   const openPicker = () => {
@@ -22,8 +24,12 @@ function DateInputWithIcon({ placeholder }) {
 
   return (
     <DateField>
-      <DateInput ref={inputRef} placeholder={placeholder} />
-      {/* ❗️여기 'ㄹ' 문자 제거하고, 버튼으로 바꾸고 z-index 는 스타일에서 */}
+      <DateInput
+        ref={inputRef}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+      />
       <CalendarIcon type="button" onClick={openPicker}>
         <CalendarSvg />
       </CalendarIcon>
@@ -31,11 +37,16 @@ function DateInputWithIcon({ placeholder }) {
   );
 }
 
+// YYYY-MM-DD -> YYYY-MM 로 자르는 헬퍼 (파이썬 스키마 패턴용)
+const toYearMonth = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr.length >= 7) return dateStr.slice(0, 7);
+  return dateStr;
+};
 
 export default function IntroInfo() {
   const navigate = useNavigate();
   const location = useLocation();
-
 
   // ✅ 기본 정보 (API로 보낼 값들)
   const [title, setTitle] = useState("");
@@ -46,150 +57,337 @@ export default function IntroInfo() {
   const initialCoverLetterId = location.state?.coverLetterId ?? null;
   const [coverLetterId, setCoverLetterId] = useState(initialCoverLetterId);
 
-  // ✅ 이력서 초안용 resumeId
+  // ✅ 이력서 초안용 (지금은 사용 안 해도 보관)
   const [resumeId, setResumeId] = useState(null);
 
   const [saving, setSaving] = useState(false);
 
-  // 각 섹션별 카드 ID 배열 (UI 렌더링용)
-  const [careerIds, setCareerIds] = useState([0]);
-  const [projectIds, setProjectIds] = useState([0]);
-  const [certIds, setCertIds] = useState([0]); // 자격증
-  const [langIds, setLangIds] = useState([0]); // 어학
-  const [skillIds, setSkillIds] = useState([0]);
-  const [activityIds, setActivityIds] = useState([0]);
-  const [awardIds, setAwardIds] = useState([0]);
-  const [skillLevel, setSkillLevel] = useState("기본");
+  // ================== 섹션별 상태 ==================
 
-   // ⬇⬇ 기존 자소서가 있는 경우, 한 번 불러와서 폼에 채우기 //최은준
+  // 경력 / 인턴 / 알바
+  const [careers, setCareers] = useState([
+    { id: 0, company: "", role: "", startDate: "", endDate: "" },
+  ]);
+
+  // 프로젝트 경험
+  const [projects, setProjects] = useState([
+    {
+      id: 0,
+      name: "",
+      role: "",
+      startDate: "",
+      endDate: "",
+      tech: "",
+      achievement: "",
+    },
+  ]);
+
+  // 자격증
+  const [certs, setCerts] = useState([{ id: 0, name: "" }]);
+
+  // 어학
+  const [langs, setLangs] = useState([{ id: 0, exam: "" }]);
+
+  // 기술 스택
+  const [skills, setSkills] = useState([{ id: 0, name: "" }]);
+  const [skillLevel, setSkillLevel] = useState("기본"); // 일단 보관만
+
+  // 교내 / 대외 활동
+  const [activities, setActivities] = useState([
+    { id: 0, name: "", role: "", startDate: "", endDate: "" },
+  ]);
+
+  // 수상 / 연구 성과
+  const [awards, setAwards] = useState([
+    { id: 0, name: "", description: "" },
+  ]);
+
+  // ================== 공통 헬퍼 ==================
+  const addItem = (setter, createItem) =>
+    setter((prev) => {
+      const nextId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 0;
+      return [...prev, { id: nextId, ...createItem() }];
+    });
+
+  const removeItem = (setter, id) =>
+    setter((prev) => prev.filter((item) => item.id !== id));
+
+  const updateItem = (setter, id, field, value) =>
+    setter((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+
+  // ================== 섹션별 헬퍼 ==================
+  const addCareer = () =>
+    addItem(setCareers, () => ({
+      company: "",
+      role: "",
+      startDate: "",
+      endDate: "",
+    }));
+  const removeCareer = (id) => removeItem(setCareers, id);
+  const changeCareer = (id, field, value) =>
+    updateItem(setCareers, id, field, value);
+
+  const addProject = () =>
+    addItem(setProjects, () => ({
+      name: "",
+      role: "",
+      startDate: "",
+      endDate: "",
+      tech: "",
+      achievement: "",
+    }));
+  const removeProject = (id) => removeItem(setProjects, id);
+  const changeProject = (id, field, value) =>
+    updateItem(setProjects, id, field, value);
+
+  const addCert = () =>
+    addItem(setCerts, () => ({
+      name: "",
+    }));
+  const removeCert = (id) => removeItem(setCerts, id);
+  const changeCert = (id, field, value) =>
+    updateItem(setCerts, id, field, value);
+
+  const addLang = () =>
+    addItem(setLangs, () => ({
+      exam: "",
+    }));
+  const removeLang = (id) => removeItem(setLangs, id);
+  const changeLang = (id, field, value) =>
+    updateItem(setLangs, id, field, value);
+
+  const addSkill = () =>
+    addItem(setSkills, () => ({
+      name: "",
+    }));
+  const removeSkill = (id) => removeItem(setSkills, id);
+  const changeSkill = (id, field, value) =>
+    updateItem(setSkills, id, field, value);
+
+  const addActivity = () =>
+    addItem(setActivities, () => ({
+      name: "",
+      role: "",
+      startDate: "",
+      endDate: "",
+    }));
+  const removeActivity = (id) => removeItem(setActivities, id);
+  const changeActivity = (id, field, value) =>
+    updateItem(setActivities, id, field, value);
+
+  const addAward = () =>
+    addItem(setAwards, () => ({
+      name: "",
+      description: "",
+    }));
+  const removeAward = (id) => removeItem(setAwards, id);
+  const changeAward = (id, field, value) =>
+    updateItem(setAwards, id, field, value);
+
+  // ⬇⬇ 기존 자소서가 있는 경우, 한 번 불러와서 기본 정보 채우기
   useEffect(() => {
     if (!initialCoverLetterId) return;
 
     (async () => {
       try {
         const draft = await getCoverLetterDraft(initialCoverLetterId);
-        // API 응답 구조에 따라 id / coverLetterId 중 하나일 거라서 둘 다 체크
         const loadedId = draft.coverLetterId ?? draft.id;
         setCoverLetterId(loadedId);
 
         setTitle(draft.title || "");
         setTargetCompany(draft.targetCompany || "");
         setTargetJob(draft.targetJob || "");
-        // sections 안의 세부 내용은 나중에 연결
+        // sections 안의 세부 내용은 나중에 필요하면 여기에 매핑 추가
       } catch (e) {
         console.error("자소서 초안 불러오기 실패:", e);
       }
     })();
   }, [initialCoverLetterId]);
 
-  // 공통 add / remove
-  const addId = (setter) =>
-    setter((prev) => [...prev, prev[prev.length - 1] + 1]);
-
-  const removeId = (setter, id) =>
-    setter((prev) => prev.filter((x) => x !== id));
-
-  // 🔹 임시 저장 → 자소서 초안 + 이력서 초안 함께 저장
-// 🔹 임시 저장 → 자소서 초안 + 이력서 초안 함께 저장
-const handleTempSave = async () => {
-  if (!title.trim()) {
-    alert("자기소개서 제목을 입력해 주세요.");
-    return;
-  }
-
-  if (!targetCompany.trim() || !targetJob.trim()) {
-    if (
-      !window.confirm(
-        "회사명 또는 지원 직무가 비어 있습니다.\n그래도 임시 저장하시겠습니까?"
-      )
-    ) {
+  // 🔹 임시 저장 → 자소서 초안 저장
+  const handleTempSave = async () => {
+    if (!title.trim()) {
+      alert("자기소개서 제목을 입력해 주세요.");
       return;
     }
-  }
 
-  // ---- 1) 자기소개서 초안 payload (기존) ----
-  const coverLetterPayload = {
-    title: title || "",
-    targetCompany: targetCompany || "",
-    targetJob: targetJob || "",
-    sections: {
-      // TODO: 나중에 실제 입력값을 모두 연결할 수 있도록 확장
-      educationExperience: [], // 경력/인턴/알바, 교육 경험 등
-      projectExperience: [],
-      technicalSkills: [],
-      certifications: [],
-      awards: [],
-    },
-  };
+    if (!targetCompany.trim() || !targetJob.trim()) {
+      if (
+        !window.confirm(
+          "회사명 또는 지원 직무가 비어 있습니다.\n그래도 임시 저장하시겠습니까?"
+        )
+      ) {
+        return;
+      }
+    }
 
-  // ---- 2) 이력서 초안 payload (API 명세서 형태) ----
-  const experienceList = []; // 경력/인턴/알바
-  const projectList = []; // 프로젝트 경험
-  const certList = []; // 자격증
-  const skillList = []; // 기술 스택
-  const clubList = []; // 교내/대외 활동
-  const awardList = []; // 수상 / 연구 성과
+    // ---- 1) 각 섹션별 리스트로 변환 ----
 
-  const resumePayload = {
-    profile: {
-      name: "",
-      phone: "",
-      email: "",
-      address: "",
-      university: {
-        name: "",
-        major: "",
+    // 경력/인턴/알바 → educationExperience / experiences
+    const experienceList = careers
+      .filter(
+        (c) =>
+          c.company.trim() ||
+          c.role.trim() ||
+          c.startDate.trim() ||
+          c.endDate.trim()
+      )
+      .map((c) => ({
+        company: c.company.trim(),
+        role: c.role.trim(),
+        start: toYearMonth(c.startDate),
+        end: toYearMonth(c.endDate),
+        tasks: c.role.trim() ? [c.role.trim()] : [],
+        achievements: [],
+      }));
+
+    // 프로젝트 경험 → projectExperience / projects
+    const projectList = projects
+      .filter(
+        (p) =>
+          p.name.trim() ||
+          p.role.trim() ||
+          p.tech.trim() ||
+          p.achievement.trim() ||
+          p.startDate.trim() ||
+          p.endDate.trim()
+      )
+      .map((p) => ({
+        name: p.name.trim(),
+        description: p.achievement.trim() || null,
+        tech: p.tech
+          ? p.tech
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+        impact: p.achievement.trim() || null,
+        start: toYearMonth(p.startDate),
+        end: toYearMonth(p.endDate),
+        role: p.role.trim() || null,
+      }));
+
+    // 자격증 이름 목록
+    const certNames = certs
+      .map((c) => c.name.trim())
+      .filter(Boolean);
+
+    // 어학 시험/점수 문자열 목록
+    const langNames = langs
+      .map((l) => l.exam.trim())
+      .filter(Boolean);
+
+    // 기술 스택 문자열 목록
+    const skillNames = skills
+      .map((s) => s.name.trim())
+      .filter(Boolean);
+
+    // skills/technicalSkills 로 묶어서 AI 에 전달
+    const allSkillNames = [...skillNames, ...certNames, ...langNames];
+    const technicalSkills = allSkillNames.map((name) => ({ name }));
+
+    // 교내/대외 활동 → activities
+    const activityList = activities
+      .filter(
+        (a) =>
+          a.name.trim() ||
+          a.role.trim() ||
+          a.startDate.trim() ||
+          a.endDate.trim()
+      )
+      .map((a) => ({
+        name: a.name.trim(),
+        role: a.role.trim() || null,
+        period:
+          a.startDate || a.endDate
+            ? `${a.startDate || ""} ~ ${a.endDate || ""}`.trim()
+            : null,
+        details: null,
+      }));
+
+    // 수상/연구 성과 → awards
+    const awardList = awards
+      .filter((a) => a.name.trim() || a.description.trim())
+      .map((a) => ({
+        name: a.name.trim(),
+        org: null,
+        details: a.description.trim() || null,
+      }));
+
+    // certifications 그대로도 보관 (참고용)
+    const certList = certNames.map((name) => ({ name }));
+
+    // ---- 2) 자소서 초안 payload ----
+    const coverLetterPayload = {
+      title: title || "",
+      targetCompany: targetCompany || "",
+      targetJob: targetJob || "",
+      sections: {
+        // 자바에서 educationExperience/experiences 둘 다 읽도록 설계
+        educationExperience: experienceList,
+        experiences: experienceList,
+
+        projectExperience: projectList,
+        projects: projectList,
+
+        // skills/technicalSkills 둘 다 지원
+        skills: skillNames, // 문자열 배열
+        technicalSkills, // { name } 배열
+
+        certifications: certList,
+        languages: langNames.map((name) => ({ name })),
+
+        activities: activityList,
+        clubs: activityList, // 혹시 모를 키 호환용
+
+        awards: awardList,
       },
-    },
-    experience: experienceList,
-    experiences: experienceList,
-    projects: projectList,
-    certifications: certList,
-    skills: skillList,
-    club: clubList,
-    clubs: clubList,
-    awards: awardList,
+    };
+
+    try {
+      setSaving(true);
+
+      // 1) 자소서 초안 저장/수정
+      let coverData;
+      if (coverLetterId) {
+        // 이미 한 번 생성된 자소서라면 → PATCH /api/cover-letters/{id}
+        coverData = await updateCoverLetterDraft(
+          coverLetterId,
+          coverLetterPayload
+        );
+      } else {
+        // 처음 생성 → POST /api/cover-letters
+        coverData = await createCoverLetterDraft(coverLetterPayload);
+      }
+
+      // coverData === { coverLetterId, title, resumeId, ... }
+      const newCoverId = coverData.coverLetterId ?? coverData.id;
+      const newResumeId = coverData.resumeId ?? resumeId;
+
+      console.log("임시 저장 후 coverLetterId:", newCoverId);
+      console.log("임시 저장 후 resumeId:", newResumeId);
+
+      if (!newCoverId) {
+        throw new Error("자소서 ID를 응답에서 찾을 수 없습니다.");
+      }
+
+      setCoverLetterId(newCoverId);
+      if (newResumeId) {
+        setResumeId(newResumeId);
+      }
+
+      alert("자기소개서 초안이 임시 저장되었습니다.");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "임시 저장 중 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
+    }
   };
-
-try {
-  setSaving(true);
-
-  // 1) 자소서 초안 저장/수정
-  let coverData;
-  if (coverLetterId) {
-    // 이미 한 번 생성된 자소서라면 → PATCH /api/cover-letters/{id}
-    coverData = await updateCoverLetterDraft(coverLetterId, coverLetterPayload);
-  } else {
-    // 처음 생성 → POST /api/cover-letters
-    coverData = await createCoverLetterDraft(coverLetterPayload);
-  }
-
-  // coverData === { coverLetterId, title, resumeId, ... }
-  const newCoverId = coverData.coverLetterId ?? coverData.id;
-  const newResumeId = coverData.resumeId ?? resumeId;
-
-  console.log("임시 저장 후 coverLetterId:", newCoverId);
-  console.log("임시 저장 후 resumeId:", newResumeId);
-
-  if (!newCoverId) {
-    throw new Error("자소서 ID를 응답에서 찾을 수 없습니다.");
-  }
-
-  setCoverLetterId(newCoverId);
-  if (newResumeId) {
-    setResumeId(newResumeId);
-  }
-
-  alert("자기소개서 초안이 임시 저장되었습니다.");
-} catch (err) {
-  console.error(err);
-  alert(err.message || "임시 저장 중 오류가 발생했습니다.");
-} finally {
-  setSaving(false);
-}
-
-};
-
 
   // 🔹 다음 단계 → /self-intro/config 로 이동 (IntroConfig에서 설정 저장)
   const handleNext = () => {
@@ -269,45 +467,71 @@ try {
                 </SectionHelp>
               </SectionTitleRow>
 
-              {careerIds.map((id, idx) => (
-                <WhiteCard key={`career-${id}`}>
-                  {idx > 0 && (
-                    <DeleteBtn
-                      type="button"
-                      onClick={() => removeId(setCareerIds, id)}
-                    >
-                      <TrashSvg />
-                    </DeleteBtn>
-                  )}
+              {careers.map(
+                ({ id, company, role, startDate, endDate }, idx) => (
+                  <WhiteCard key={`career-${id}`}>
+                    {idx > 0 && (
+                      <DeleteBtn
+                        type="button"
+                        onClick={() => removeCareer(id)}
+                      >
+                        <TrashSvg />
+                      </DeleteBtn>
+                    )}
 
-                  <ComplexRow>
-                    <ComplexLabel>회사명</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="회사/기관명 입력" />
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>회사명</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="회사/기관명 입력"
+                          value={company}
+                          onChange={(e) =>
+                            changeCareer(id, "company", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>기간</ComplexLabel>
-                    <ComplexInputCell>
-                      <DateRangeWrapper>
-                        <DateInputWithIcon placeholder="시작일" />
-                        <Tilde>~</Tilde>
-                        <DateInputWithIcon placeholder="종료일" />
-                      </DateRangeWrapper>
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>기간</ComplexLabel>
+                      <ComplexInputCell>
+                        <DateRangeWrapper>
+                          <DateInputWithIcon
+                            placeholder="시작일"
+                            value={startDate}
+                            onChange={(e) =>
+                              changeCareer(id, "startDate", e.target.value)
+                            }
+                          />
+                          <Tilde>~</Tilde>
+                          <DateInputWithIcon
+                            placeholder="종료일"
+                            value={endDate}
+                            onChange={(e) =>
+                              changeCareer(id, "endDate", e.target.value)
+                            }
+                          />
+                        </DateRangeWrapper>
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>담당 업무</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="ex. 프론트엔드 개발" />
-                    </ComplexInputCell>
-                  </ComplexRow>
-                </WhiteCard>
-              ))}
+                    <ComplexRow>
+                      <ComplexLabel>담당 업무</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="ex. 프론트엔드 개발"
+                          value={role}
+                          onChange={(e) =>
+                            changeCareer(id, "role", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
+                  </WhiteCard>
+                )
+              )}
 
-              <PlusBox type="button" onClick={() => addId(setCareerIds)}>
+              <PlusBox type="button" onClick={addCareer}>
                 +
               </PlusBox>
             </Section>
@@ -320,64 +544,111 @@ try {
                 <SectionTitle>프로젝트 경험</SectionTitle>
               </SectionTitleRow>
 
-              {projectIds.map((id, idx) => (
-                <WhiteCard key={`proj-${id}`}>
-                  {idx > 0 && (
-                    <DeleteBtn
-                      type="button"
-                      onClick={() => removeId(setProjectIds, id)}
-                    >
-                      <TrashSvg />
-                    </DeleteBtn>
-                  )}
+              {projects.map(
+                (
+                  {
+                    id,
+                    name,
+                    role,
+                    startDate,
+                    endDate,
+                    tech,
+                    achievement,
+                  },
+                  idx
+                ) => (
+                  <WhiteCard key={`proj-${id}`}>
+                    {idx > 0 && (
+                      <DeleteBtn
+                        type="button"
+                        onClick={() => removeProject(id)}
+                      >
+                        <TrashSvg />
+                      </DeleteBtn>
+                    )}
 
-                  <ComplexRow>
-                    <ComplexLabel>프로젝트</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="프로젝트명 입력" />
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>프로젝트</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="프로젝트명 입력"
+                          value={name}
+                          onChange={(e) =>
+                            changeProject(id, "name", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>기간</ComplexLabel>
-                    <ComplexInputCell>
-                      <DateRangeWrapper>
-                        <DateInputWithIcon placeholder="시작일" />
-                        <Tilde>~</Tilde>
-                        <DateInputWithIcon placeholder="종료일" />
-                      </DateRangeWrapper>
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>기간</ComplexLabel>
+                      <ComplexInputCell>
+                        <DateRangeWrapper>
+                          <DateInputWithIcon
+                            placeholder="시작일"
+                            value={startDate}
+                            onChange={(e) =>
+                              changeProject(id, "startDate", e.target.value)
+                            }
+                          />
+                          <Tilde>~</Tilde>
+                          <DateInputWithIcon
+                            placeholder="종료일"
+                            value={endDate}
+                            onChange={(e) =>
+                              changeProject(id, "endDate", e.target.value)
+                            }
+                          />
+                        </DateRangeWrapper>
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>역할</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="ex. 프론트엔드 개발" />
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>역할</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="ex. 프론트엔드 개발"
+                          value={role}
+                          onChange={(e) =>
+                            changeProject(id, "role", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>기술/도구</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="사용 기술/도구 입력" />
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>기술/도구</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="사용 기술/도구 입력 (쉼표로 구분)"
+                          value={tech}
+                          onChange={(e) =>
+                            changeProject(id, "tech", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>성과</ComplexLabel>
-                    <ComplexInputCell>
-                      <TextareaBox
-                        rows={3}
-                        placeholder={
-                          "프로젝트 시 이룬 성과를 입력해 주세요. (200자 이내)\nex. 생산성 2배 향상"
-                        }
-                      />
-                    </ComplexInputCell>
-                  </ComplexRow>
-                </WhiteCard>
-              ))}
+                    <ComplexRow>
+                      <ComplexLabel>성과</ComplexLabel>
+                      <ComplexInputCell>
+                        <TextareaBox
+                          rows={3}
+                          placeholder={
+                            "프로젝트 시 이룬 성과를 입력해 주세요. (200자 이내)\nex. 생산성 2배 향상"
+                          }
+                          value={achievement}
+                          onChange={(e) =>
+                            changeProject(id, "achievement", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
+                  </WhiteCard>
+                )
+              )}
 
-              <PlusBox type="button" onClick={() => addId(setProjectIds)}>
+              <PlusBox type="button" onClick={addProject}>
                 +
               </PlusBox>
             </Section>
@@ -402,12 +673,12 @@ try {
 
               {/* 자격증 */}
               <SubSectionTitle>자격증</SubSectionTitle>
-              {certIds.map((id, idx) => (
+              {certs.map(({ id, name }, idx) => (
                 <WhiteCard key={`cert-${id}`}>
                   {idx > 0 && (
                     <DeleteBtn
                       type="button"
-                      onClick={() => removeId(setCertIds, id)}
+                      onClick={() => removeCert(id)}
                     >
                       <TrashSvg />
                     </DeleteBtn>
@@ -416,23 +687,29 @@ try {
                   <ComplexRow>
                     <ComplexLabel>자격증</ComplexLabel>
                     <ComplexInputCell>
-                      <InputBox placeholder="ex. 정보처리 기사" />
+                      <InputBox
+                        placeholder="ex. 정보처리 기사"
+                        value={name}
+                        onChange={(e) =>
+                          changeCert(id, "name", e.target.value)
+                        }
+                      />
                     </ComplexInputCell>
                   </ComplexRow>
                 </WhiteCard>
               ))}
-              <PlusBox type="button" onClick={() => addId(setCertIds)}>
+              <PlusBox type="button" onClick={addCert}>
                 +
               </PlusBox>
 
               {/* 어학 */}
               <SubSectionTitle style={{ marginTop: 18 }}>어학</SubSectionTitle>
-              {langIds.map((id, idx) => (
+              {langs.map(({ id, exam }, idx) => (
                 <WhiteCard key={`lang-${id}`}>
                   {idx > 0 && (
                     <DeleteBtn
                       type="button"
-                      onClick={() => removeId(setLangIds, id)}
+                      onClick={() => removeLang(id)}
                     >
                       <TrashSvg />
                     </DeleteBtn>
@@ -441,12 +718,18 @@ try {
                   <ComplexRow>
                     <ComplexLabel>어학시험</ComplexLabel>
                     <ComplexInputCell>
-                      <InputBox placeholder="시험명 / 어학 점수" />
+                      <InputBox
+                        placeholder="시험명 / 어학 점수"
+                        value={exam}
+                        onChange={(e) =>
+                          changeLang(id, "exam", e.target.value)
+                        }
+                      />
                     </ComplexInputCell>
                   </ComplexRow>
                 </WhiteCard>
               ))}
-              <PlusBox type="button" onClick={() => addId(setLangIds)}>
+              <PlusBox type="button" onClick={addLang}>
                 +
               </PlusBox>
             </Section>
@@ -462,12 +745,12 @@ try {
                 </SectionHelp>
               </SectionTitleRow>
 
-              {skillIds.map((id, idx) => (
+              {skills.map(({ id, name }, idx) => (
                 <WhiteCard key={`skill-${id}`}>
                   {idx > 0 && (
                     <DeleteBtn
                       type="button"
-                      onClick={() => removeId(setSkillIds, id)}
+                      onClick={() => removeSkill(id)}
                     >
                       <TrashSvg />
                     </DeleteBtn>
@@ -476,15 +759,19 @@ try {
                   <ComplexRow>
                     <ComplexLabel>기술 스택</ComplexLabel>
                     <ComplexInputCell>
-                      <InputBox placeholder="ex. Java" />
+                      <InputBox
+                        placeholder="ex. Java"
+                        value={name}
+                        onChange={(e) =>
+                          changeSkill(id, "name", e.target.value)
+                        }
+                      />
                     </ComplexInputCell>
                   </ComplexRow>
-
-                  
                 </WhiteCard>
               ))}
 
-              <PlusBox type="button" onClick={() => addId(setSkillIds)}>
+              <PlusBox type="button" onClick={addSkill}>
                 +
               </PlusBox>
             </Section>
@@ -500,45 +787,75 @@ try {
                 </SectionHelp>
               </SectionTitleRow>
 
-              {activityIds.map((id, idx) => (
-                <WhiteCard key={`act-${id}`}>
-                  {idx > 0 && (
-                    <DeleteBtn
-                      type="button"
-                      onClick={() => removeId(setActivityIds, id)}
-                    >
-                      <TrashSvg />
-                    </DeleteBtn>
-                  )}
+              {activities.map(
+                ({ id, name, role, startDate, endDate }, idx) => (
+                  <WhiteCard key={`act-${id}`}>
+                    {idx > 0 && (
+                      <DeleteBtn
+                        type="button"
+                        onClick={() => removeActivity(id)}
+                      >
+                        <TrashSvg />
+                      </DeleteBtn>
+                    )}
 
-                  <ComplexRow>
-                    <ComplexLabel>활동명</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="ex. 정보통신공학과 학회" />
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>활동명</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="ex. 정보통신공학과 학회"
+                          value={name}
+                          onChange={(e) =>
+                            changeActivity(id, "name", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>기간</ComplexLabel>
-                    <ComplexInputCell>
-                      <DateRangeWrapper>
-                        <DateInputWithIcon placeholder="시작일" />
-                        <Tilde>~</Tilde>
-                        <DateInputWithIcon placeholder="종료일" />
-                      </DateRangeWrapper>
-                    </ComplexInputCell>
-                  </ComplexRow>
+                    <ComplexRow>
+                      <ComplexLabel>기간</ComplexLabel>
+                      <ComplexInputCell>
+                        <DateRangeWrapper>
+                          <DateInputWithIcon
+                            placeholder="시작일"
+                            value={startDate}
+                            onChange={(e) =>
+                              changeActivity(
+                                id,
+                                "startDate",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Tilde>~</Tilde>
+                          <DateInputWithIcon
+                            placeholder="종료일"
+                            value={endDate}
+                            onChange={(e) =>
+                              changeActivity(id, "endDate", e.target.value)
+                            }
+                          />
+                        </DateRangeWrapper>
+                      </ComplexInputCell>
+                    </ComplexRow>
 
-                  <ComplexRow>
-                    <ComplexLabel>담당 업무</ComplexLabel>
-                    <ComplexInputCell>
-                      <InputBox placeholder="ex. 기획 차장" />
-                    </ComplexInputCell>
-                  </ComplexRow>
-                </WhiteCard>
-              ))}
+                    <ComplexRow>
+                      <ComplexLabel>담당 업무</ComplexLabel>
+                      <ComplexInputCell>
+                        <InputBox
+                          placeholder="ex. 기획 차장"
+                          value={role}
+                          onChange={(e) =>
+                            changeActivity(id, "role", e.target.value)
+                          }
+                        />
+                      </ComplexInputCell>
+                    </ComplexRow>
+                  </WhiteCard>
+                )
+              )}
 
-              <PlusBox type="button" onClick={() => addId(setActivityIds)}>
+              <PlusBox type="button" onClick={addActivity}>
                 +
               </PlusBox>
             </Section>
@@ -552,12 +869,12 @@ try {
                 <SectionHelp>공모전, 대회, 논문, 포스터 발표 등</SectionHelp>
               </SectionTitleRow>
 
-              {awardIds.map((id, idx) => (
+              {awards.map(({ id, name, description }, idx) => (
                 <WhiteCard key={`award-${id}`}>
                   {idx > 0 && (
                     <DeleteBtn
                       type="button"
-                      onClick={() => removeId(setAwardIds, id)}
+                      onClick={() => removeAward(id)}
                     >
                       <TrashSvg />
                     </DeleteBtn>
@@ -566,7 +883,13 @@ try {
                   <ComplexRow>
                     <ComplexLabel>활동명</ComplexLabel>
                     <ComplexInputCell>
-                      <InputBox placeholder="ex. ○○ 공모전 참여" />
+                      <InputBox
+                        placeholder="ex. ○○ 공모전 참여"
+                        value={name}
+                        onChange={(e) =>
+                          changeAward(id, "name", e.target.value)
+                        }
+                      />
                     </ComplexInputCell>
                   </ComplexRow>
 
@@ -576,13 +899,17 @@ try {
                       <TextareaBox
                         rows={3}
                         placeholder="활동 상세내용을 작성해주세요. (300자 이내)"
+                        value={description}
+                        onChange={(e) =>
+                          changeAward(id, "description", e.target.value)
+                        }
                       />
                     </ComplexInputCell>
                   </ComplexRow>
                 </WhiteCard>
               ))}
 
-              <PlusBox type="button" onClick={() => addId(setAwardIds)}>
+              <PlusBox type="button" onClick={addAward}>
                 +
               </PlusBox>
             </Section>
@@ -972,7 +1299,7 @@ const PlusBox = styled.button`
   }
 `;
 
-/* 기술 스택 태그 */
+/* 기술 스택 태그 (지금은 사용 X, 나중 확장용) */
 
 const TagRow = styled.div`
   display: inline-flex;
@@ -1057,4 +1384,3 @@ const BottomBlueBtn = styled(BaseBottomBtn)`
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.28);
   }
 `;
-
