@@ -93,3 +93,9 @@ async def coverletter_export(
 
     # 생성된 파일을 FileResponse로 전송
     return FileResponse(path, filename=path.split("/")[-1])
+
+@app.post("/api/coverletter/generate", response_model=CoverLetterResponse)
+async def generate_cover_letter(req: CoverLetterRequest):
+    print("=== [AI SERVER] 받은 요청 ===")
+    print(req.model_dump())                    # 생성된 자소서 본문 텍스트
+

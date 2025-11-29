@@ -1,6 +1,7 @@
 package com.jobbuddy.backend.service;
 // 만든놈 최은준
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jobbuddy.backend.ai.AiCoverLetterClient;
 import com.jobbuddy.backend.ai.AiCoverLetterClient.AiCoverLetterRequest;
 import com.jobbuddy.backend.ai.AiCoverLetterClient.AiCoverLetterResponse;
@@ -180,128 +181,140 @@ public CoverLetterPreviewResponse getCoverLetterPreview(Long coverLetterId, Long
     // =================================================================================
     // (2), (3) 생성 요청 – vA 베이스 + vB의 섹션 파싱/유연성 + vA 에러 처리
     // =================================================================================
-    @Override
-    @Transactional
-    public void generateCoverLetter(Long userId, Long coverLetterId) {
-        CoverLetter coverLetter = coverLetterRepository
-                .findByIdAndOwnerId(coverLetterId, userId)
-                .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
+@Override
+@Transactional
+public void generateCoverLetter(Long userId, Long coverLetterId) {
+    CoverLetter coverLetter = coverLetterRepository
+            .findByIdAndOwnerId(coverLetterId, userId)
+            .orElseThrow(() -> new NoSuchElementException("Cover letter not found"));
 
-        // vA 도메인 메서드 사용: 상태를 PROCESSING 으로
-        coverLetter.startProcessing();
-        coverLetterRepository.save(coverLetter);
+    // vA 도메인 메서드 사용: 상태를 PROCESSING 으로
+    coverLetter.startProcessing();
+    coverLetterRepository.save(coverLetter);
 
-        try {
-            AiCoverLetterRequest req = new AiCoverLetterRequest();
-            Map<String, Object> sections = coverLetter.getSections();
-            ResumeData data = new ResumeData();
+    try {
+        AiCoverLetterRequest req = new AiCoverLetterRequest();
+        Map<String, Object> sections = coverLetter.getSections();
+        ResumeData data = new ResumeData();
 
-            if (sections != null) {
-                // profile
-                Object profileObj = sections.get("profile");
-                if (profileObj instanceof Map<?, ?>) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> profileMap = (Map<String, Object>) profileObj;
-                    data.setProfile(profileMap);
-                }
+        if (sections != null) {
+            // profile
+            Object profileObj = sections.get("profile");
+            if (profileObj instanceof Map<?, ?>) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> profileMap = (Map<String, Object>) profileObj;
+                data.setProfile(profileMap);
+            }
 
-                // experiences ← experiences | experience | educationExperience
-                Object expObj = sections.get("experiences");
-                if (expObj == null) expObj = sections.get("experience");
-                if (expObj == null) expObj = sections.get("educationExperience");
-                if (expObj instanceof List<?>) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> expList = (List<Map<String, Object>>) expObj;
-                    data.setExperiences(expList);
-                }
+            // experiences ← experiences | experience | educationExperience
+            Object expObj = sections.get("experiences");
+            if (expObj == null) expObj = sections.get("experience");
+            if (expObj == null) expObj = sections.get("educationExperience");
+            if (expObj instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> expList = (List<Map<String, Object>>) expObj;
+                data.setExperiences(expList);
+            }
 
-                // projects ← projects | projectExperience
-                Object projObj = sections.get("projects");
-                if (projObj == null) projObj = sections.get("projectExperience");
-                if (projObj instanceof List<?>) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> projList = (List<Map<String, Object>>) projObj;
-                    data.setProjects(projList);
-                }
+            // projects ← projects | projectExperience
+            Object projObj = sections.get("projects");
+            if (projObj == null) projObj = sections.get("projectExperience");
+            if (projObj instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> projList = (List<Map<String, Object>>) projObj;
+                data.setProjects(projList);
+            }
 
-                // activities ← activities | club | clubs
-                Object actObj = sections.get("activities");
-                if (actObj == null) actObj = sections.get("club");
-                if (actObj == null) actObj = sections.get("clubs");
-                if (actObj instanceof List<?>) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> actList = (List<Map<String, Object>>) actObj;
-                    data.setActivities(actList);
-                }
+            // activities ← activities | club | clubs
+            Object actObj = sections.get("activities");
+            if (actObj == null) actObj = sections.get("club");
+            if (actObj == null) actObj = sections.get("clubs");
+            if (actObj instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> actList = (List<Map<String, Object>>) actObj;
+                data.setActivities(actList);
+            }
 
-                // awards
-                Object awardsObj = sections.get("awards");
-                if (awardsObj instanceof List<?>) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> awardsList = (List<Map<String, Object>>) awardsObj;
-                    data.setAwards(awardsList);
-                }
+            // awards
+            Object awardsObj = sections.get("awards");
+            if (awardsObj instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> awardsList = (List<Map<String, Object>>) awardsObj;
+                data.setAwards(awardsList);
+            }
 
-                // skills ← skills | technicalSkills
-                Object skillsObj = sections.get("skills");
-                if (skillsObj == null) skillsObj = sections.get("technicalSkills");
-                if (skillsObj instanceof List<?>) {
-                    List<?> rawList = (List<?>) skillsObj;
-                    if (!rawList.isEmpty()) {
-                        Object first = rawList.get(0);
-                        if (first instanceof String) {
-                            // List<String>
-                            @SuppressWarnings("unchecked")
-                            List<String> skillNames = (List<String>) skillsObj;
-                            data.setSkills(skillNames);
-                        } else if (first instanceof Map<?, ?>) {
-                            // List<Map<String,Object>> → name 필드 추출
-                            @SuppressWarnings("unchecked")
-                            List<Map<String, Object>> skillMapList = (List<Map<String, Object>>) skillsObj;
-                            List<String> names = skillMapList.stream()
-                                    .map(m -> String.valueOf(m.getOrDefault("name", "")))
-                                    .collect(Collectors.toList());
-                            data.setSkills(names);
-                        }
+            // skills ← skills | technicalSkills
+            Object skillsObj = sections.get("skills");
+            if (skillsObj == null) skillsObj = sections.get("technicalSkills");
+            if (skillsObj instanceof List<?>) {
+                List<?> rawList = (List<?>) skillsObj;
+                if (!rawList.isEmpty()) {
+                    Object first = rawList.get(0);
+                    if (first instanceof String) {
+                        // List<String>
+                        @SuppressWarnings("unchecked")
+                        List<String> skillNames = (List<String>) skillsObj;
+                        data.setSkills(skillNames);
+                    } else if (first instanceof Map<?, ?>) {
+                        // List<Map<String,Object>> → name 필드 추출
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> skillMapList = (List<Map<String, Object>>) skillsObj;
+                        List<String> names = skillMapList.stream()
+                                .map(m -> String.valueOf(m.getOrDefault("name", "")))
+                                .collect(Collectors.toList());
+                        data.setSkills(names);
                     }
                 }
             }
+        }
 
-            req.setData(data);
+        req.setData(data);
 
-            EssayConfig essay = new EssayConfig();
-            essay.setQuestion("지원 동기");
-            essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
-            essay.setLength(
-                    coverLetter.getLengthPerQuestion() != null
-                            ? coverLetter.getLengthPerQuestion()
-                            : 1000
-            );
-            req.setEssay(essay);
+        EssayConfig essay = new EssayConfig();
+        essay.setQuestion("지원 동기");  // TODO: 나중에 실제 문항 문자열로 바꿀 수도 있음
+        essay.setTone(coverLetter.getTone() != null ? coverLetter.getTone() : "진솔한");
+        essay.setLength(
+                coverLetter.getLengthPerQuestion() != null
+                        ? coverLetter.getLengthPerQuestion()
+                        : 1000
+        );
+        req.setEssay(essay);
 
-            AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
+        // 🔽🔽🔽 여기 추가된 부분: 실제로 AI로 나가는 JSON 로그 찍기 🔽🔽🔽
+        try {
+            ObjectMapper om = new ObjectMapper();
+            String json = om.writeValueAsString(req);
+            System.out.println("=== [AI REQUEST JSON] ===");
+            System.out.println(json);
+        } catch (Exception logEx) {
+            System.out.println("=== [AI REQUEST JSON 직렬화 실패] ===");
+            logEx.printStackTrace();
+        }
+        // 🔼🔼🔼 추가 끝 🔼🔼🔼
 
-            if (res == null || res.getCoverLetter() == null || res.getCoverLetter().isBlank()) {
-                coverLetter.setStatus(CoverLetterStatus.FAILED);
-                coverLetterRepository.save(coverLetter);
-                throw new IllegalStateException("AI Response is empty");
-            }
+        AiCoverLetterResponse res = aiCoverLetterClient.generate(req);
 
-            Map<String, Object> updatedSections = coverLetter.getSections();
-            if (updatedSections == null) updatedSections = new HashMap<>();
-            updatedSections.put("generatedCoverLetter", res.getCoverLetter());
-            coverLetter.setSections(updatedSections);
-
-            // vA 도메인 메서드: SUCCESS 로 완료
-            coverLetter.completeGeneration(null);
-            coverLetterRepository.save(coverLetter);
-
-        } catch (Exception e) {
+        if (res == null || res.getCoverLetter() == null || res.getCoverLetter().isBlank()) {
             coverLetter.setStatus(CoverLetterStatus.FAILED);
             coverLetterRepository.save(coverLetter);
-            throw new RuntimeException("Generation failed", e);
+            throw new IllegalStateException("AI Response is empty");
         }
+
+        Map<String, Object> updatedSections = coverLetter.getSections();
+        if (updatedSections == null) updatedSections = new HashMap<>();
+        updatedSections.put("generatedCoverLetter", res.getCoverLetter());
+        coverLetter.setSections(updatedSections);
+
+        // vA 도메인 메서드: SUCCESS 로 완료
+        coverLetter.completeGeneration(null);
+        coverLetterRepository.save(coverLetter);
+
+    } catch (Exception e) {
+        coverLetter.setStatus(CoverLetterStatus.FAILED);
+        coverLetterRepository.save(coverLetter);
+        throw new RuntimeException("Generation failed", e);
     }
+}
 
 // =================================================================================
 // (4) 다운로드 – 실제 DOCX / PDF 파일 생성

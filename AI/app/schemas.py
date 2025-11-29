@@ -103,4 +103,5 @@ class CoverLetterRequest(BaseModel):
 
 class CoverLetterResponse(BaseModel):
     """자소서 생성 결과"""
-    cover_letter: str                        # 생성된 자소서 본문 텍스트
+    cover_letter: str    
+

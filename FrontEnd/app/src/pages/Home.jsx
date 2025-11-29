@@ -1,11 +1,14 @@
+// src/pages/Home.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
+
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
 
-import styled from "styled-components";
 import homeCharacter from "../assets/homeCharacter.png";
 import jobBuddyLogo from "../assets/Job Buddy logo.png";
+import { isLoggedIn } from "../api/auth";
 
 const PageLayer = styled.div`
   position: relative;
@@ -193,6 +196,16 @@ const FeatureDesc = styled.div`
 export default function Home() {
   const navigate = useNavigate();
 
+  const handleCreateIntro = () => {
+    if (!isLoggedIn()) {
+      alert("로그인이 필요합니다.");
+      navigate("/login");
+      return;
+    }
+    // 라우터 경로에 맞게 소문자 /self-intro/info 사용
+    navigate("/self-intro/info");
+  };
+
   return (
     <>
       <Background />
@@ -209,9 +222,7 @@ export default function Home() {
               <LogoImage src={jobBuddyLogo} alt="Job Buddy 로고" />
               <SubText>와 함께해요!</SubText>
 
-              <Button onClick={() => navigate("/self-intro/Info")}>
-                자기소개서 생성
-              </Button>
+              <Button onClick={handleCreateIntro}>자기소개서 생성</Button>
             </HeroText>
 
             <HeroImage src={homeCharacter} alt="Job Buddy 캐릭터" />
@@ -228,7 +239,6 @@ export default function Home() {
                   viewBox="0 0 60 60"
                   fill="none"
                 >
-                  {/* ...SVG 내용 동일 */}
                   <path
                     d="M47.5583 0C50.0007 0 52.179 2.61967 52.179 6.13858C52.179 9.67004 50.0007 12.2772 47.5583 12.2772C45.1158 12.2772 42.9375 9.67004 42.9375 6.13858C42.9375 2.61967 45.1158 0 47.5583 0ZM30.0125 0C32.4417 0 34.6333 2.61967 34.6333 6.13858C34.6333 9.67004 32.4417 12.2772 30.0125 12.2772C27.5701 12.2772 25.3786 9.67004 25.3786 6.13858C25.3786 2.61967 27.5701 0 30.0125 0ZM12.4536 0C14.896 0 17.0744 2.61967 17.0744 6.13858C17.0744 9.67004 14.896 12.2772 12.4536 12.2772C10.0112 12.2772 7.82094 9.67004 7.82094 6.13858C7.82094 2.61967 10.0112 0 12.4536 0ZM30.0125 15.2049C38.4619 15.4838 45.5911 15.4838 54.1461 15.7905C58.2256 18.2721 60.1135 30.9871 59.9947 35.4066L57.6711 37.8743C56.6546 31.9072 55.374 23.9465 53.2484 22.1759V34.3889L53.7897 60H50.8588L48.654 34.2495H46.2776L44.0729 60H41.1288L41.6833 34.3889L40.6271 22.0504H36.7589L35.8083 34.3471L36.3628 59.9582H33.4187L31.2007 34.2076H28.8243L26.6064 59.9582H23.6755L24.23 34.3471L23.2662 22.0504H19.398L18.3418 34.3889L18.8963 60H15.9522L13.7474 34.2495H11.371L9.14116 60H6.21027L6.76477 34.3889V22.1759C4.62601 23.9465 3.3454 31.9072 2.32883 37.8743L0.00523836 35.4066C-0.113581 30.9871 1.78754 18.2721 5.85381 15.7905C14.4339 15.4838 21.5631 15.4838 30.0125 15.2049Z"
                     fill="black"
@@ -251,7 +261,6 @@ export default function Home() {
                   viewBox="0 0 60 60"
                   fill="none"
                 >
-                  {/* ...SVG 내용 동일 */}
                   <path
                     d="M27.5 30C27.5 30.663 27.7634 31.2989 28.2322 31.7678C28.7011 32.2366 29.337 32.5 30 32.5C30.663 32.5 31.2989 32.2366 31.7678 31.7678C32.2366 31.2989 32.5 30.663 32.5 30C32.5 29.337 32.2366 28.7011 31.7678 28.2322C31.2989 27.7634 30.663 27.5 30 27.5C29.337 27.5 28.7011 27.7634 28.2322 28.2322C27.7634 28.7011 27.5 29.337 27.5 30Z"
                     stroke="black"
@@ -298,14 +307,12 @@ export default function Home() {
             <FeatureCard>
               <FeatureInner>
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns="http://.w3.org/2000/svg"
                   width="60"
                   height="60"
                   viewBox="0 0 60 60"
                   fill="none"
                 >
-
-                  {/* ...SVG 내용 동일 */}
                   <g clipPath="url(#clip0_121_200)">
                     <path
                       d="M36.725 5.52502L10.825 28.725C9.22501 30.175 10.125 32.85 12.275 33.05L32.5 35L20.375 51.9C19.825 52.675 19.9 53.75 20.575 54.425C21.325 55.175 22.5 55.2 23.275 54.475L49.175 31.275C50.775 29.825 49.875 27.15 47.725 26.95L27.5 25L39.625 8.10002C40.175 7.32502 40.1 6.25002 39.425 5.57502C39.0716 5.21406 38.5904 5.00651 38.0852 4.99716C37.5801 4.9878 37.0916 5.17739 36.725 5.52502Z"

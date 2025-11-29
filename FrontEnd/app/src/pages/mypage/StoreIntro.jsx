@@ -289,7 +289,7 @@ export default function StoreIntro() {
               <TitleGroup>
                 {/* ✅ 000 부분에 사용자 이름 넣기 */}
                 <Title>자소서 보관함</Title>
-                <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
+                <Sub>생성한 자소서를 저장하거나, 삭제할 수 있어요.</Sub>
               </TitleGroup>
 
               <NewButton onClick={() => navigate("/self-intro/Info")}>
