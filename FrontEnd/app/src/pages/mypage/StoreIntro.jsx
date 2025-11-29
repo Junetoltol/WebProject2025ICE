@@ -3,7 +3,10 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/Header";
 import { isLoggedIn } from "../../api/auth";
-import { getCoverLetterArchive } from "../../api/selfIntro"; // ✅ 보관함 API 추가
+import {
+  getCoverLetterArchive,
+  deleteCoverLetter,
+} from "../../api/selfIntro"; // ✅ 보관함 + 삭제 API
 
 const Wrap = styled.div`
   min-height: 100vh;
@@ -205,7 +208,8 @@ export default function StoreIntro() {
         // page.content 안에 데이터가 있을 때만 목록으로 교체
         if (page && Array.isArray(page.content) && page.content.length > 0) {
           const mapped = page.content.map((item) => ({
-            id: item.id, // 또는 item.coverLetterId 등 실제 필드명에 맞게
+            // ★ 명세서 기준: coverLetterId 사용
+            id: item.coverLetterId,
             title: item.title || "제목 없음",
             modified: formatDate(item.updatedAt || item.createdAt),
           }));
@@ -230,13 +234,26 @@ export default function StoreIntro() {
     navigate(`/self-intro/${docId}`);
   };
 
-  // ✅ 삭제하기
-  const handleDeleteDoc = (docId) => {
-    const ok = window.confirm("정말 이 자소서를 삭제할까요?");
+  // ✅ 삭제하기 (백엔드 연동)
+  const handleDeleteDoc = async (docId) => {
+    const ok = window.confirm(
+      "정말 이 자소서를 삭제할까요? (삭제 후에는 복구할 수 없습니다)"
+    );
     if (!ok) return;
 
-    setDocs((prev) => prev.filter((doc) => doc.id !== docId));
-    // TODO: DELETE /api/cover-letters/{coverLetterId} 연동
+    try {
+      await deleteCoverLetter(docId); // ★ 여기로 올바른 id 전달
+
+      setDocs((prev) => {
+        const next = prev.filter((doc) => doc.id !== docId);
+        return next.length === 0
+          ? [{ id: 1, title: "새문서 1", modified: "-" }]
+          : next;
+      });
+    } catch (err) {
+      console.error("자소서 삭제 실패:", err);
+      alert(err.message || "자소서 삭제 중 오류가 발생했습니다.");
+    }
   };
 
   // ✅ 다운로드

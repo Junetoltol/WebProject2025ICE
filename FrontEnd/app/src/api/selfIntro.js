@@ -196,8 +196,11 @@ export async function generateCoverLetter(coverLetterId, options = {}) {
 
   try {
     const params = {};
-    if (options.mode) params.mode = options.mode; // 예: "poll"
-    if (options.exportFormat) params.exportFormat = options.exportFormat; // 예: "word"
+
+    // ✅ 기본값: mode=poll (options.mode가 있으면 그 값 사용)
+    params.mode = options.mode ?? "poll";
+
+    if (options.exportFormat) params.exportFormat = options.exportFormat;
 
     const body = options.body ?? {};
 
@@ -225,11 +228,18 @@ export async function generateCoverLetter(coverLetterId, options = {}) {
 
   const json = res.data ?? null;
 
-  if (!json || !json.data || !isSuccessCode(json.code)) {
+  // ✅ 여기부터가 두 번째 수정 포인트 (응답 코드 체크)
+  if (!json || !json.data) {
     throw new Error(json?.message || "자소서 생성 요청에 실패했습니다.");
   }
 
-  // { code, message, data: { coverLetterId, status, previewUrl, ... } }
+  const code = json.code;
+  const ok = code === 200 || code === 202 || code === "SU"; // 202 허용
+  if (!ok) {
+    throw new Error(json?.message || "자소서 생성 요청에 실패했습니다.");
+  }
+
+  // IntroConfig에서 generateResult.data 쓰는 구조 유지
   return json;
 }
 
@@ -258,8 +268,8 @@ export async function downloadCoverLetterFile(coverLetterId, format) {
   let res;
   try {
     res = await api.get(`/api/cover-letters/${coverLetterId}/download`, {
-      params: { format },          // ?format=word | pdf
-      responseType: "blob",        // 🔹 파일(이진 데이터)로 받기
+      params: { format }, // ?format=word | pdf
+      responseType: "blob", // 🔹 파일(이진 데이터)로 받기
     });
   } catch (err) {
     if (!err.response) {
@@ -353,4 +363,84 @@ export async function archiveCoverLetter(coverLetterId) {
 
   // data: { coverLetterId, archived: true }
   return json.data;
+}
+
+// ===== 자소서 보관함 목록 조회 =====
+// GET /api/cover-letters?page=0&size=10&q=&tone=&sort=updatedAt,desc
+export async function getCoverLetterArchive({
+  page = 0,
+  size = 10,
+  q = "",
+  tone = "",
+  sort = "updatedAt,desc",
+} = {}) {
+  if (!isLoggedIn()) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  let res;
+  try {
+    res = await api.get("/api/cover-letters", {
+      params: { page, size, q, tone, sort },
+    });
+  } catch (err) {
+    if (!err.response) {
+      console.error("자소서 보관함 조회 네트워크 오류:", err);
+      throw new Error(
+        "서버에 연결할 수 없습니다. (네트워크/CORS 문제일 수 있습니다)"
+      );
+    }
+
+    const json = err.response.data ?? {};
+    const message =
+      json.message || "자소서 보관함 목록 조회에 실패했습니다.";
+
+    const error = new Error(message);
+    error.status = json.status ?? json.code ?? err.response.status;
+    error.data = json;
+    throw error;
+  }
+
+  const json = res.data ?? null;
+
+  if (!json || !json.data || (json.code !== 200 && json.code !== "SU")) {
+    throw new Error(
+      json?.message || "자소서 보관함 목록 조회에 실패했습니다."
+    );
+  }
+
+  // PageResponse<CoverLetterListItemResponse> 가 올 거라고 가정하고 data만 반환
+  return json.data;
+}
+
+// ✅ 자소서 삭제 API
+export async function deleteCoverLetter(coverLetterId) {
+  if (!isLoggedIn()) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  let res;
+  try {
+    res = await api.delete(`/api/cover-letters/${coverLetterId}`);
+  } catch (err) {
+    if (!err.response) {
+      console.error("자소서 삭제 네트워크 오류:", err);
+      throw new Error("네트워크 오류로 자소서를 삭제하지 못했습니다.");
+    }
+
+    const body = err.response.data || {};
+    const msg = body.message || "자소서 삭제 중 오류가 발생했습니다.";
+    console.error("자소서 삭제 실패 응답:", body);
+    throw new Error(msg);
+  }
+
+  const body = res.data || {};
+  const code = body.code ?? res.status;
+
+  if (!isSuccessCode(code)) {
+    const msg = body.message || "자소서 삭제에 실패했습니다.";
+    throw new Error(msg);
+  }
+
+  return true;
 }
