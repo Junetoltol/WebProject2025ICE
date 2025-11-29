@@ -288,7 +288,7 @@ export default function StoreIntro() {
             <BoxHeader>
               <TitleGroup>
                 {/* ✅ 000 부분에 사용자 이름 넣기 */}
-                <Title>{userName}님의 자소서 보관함</Title>
+                <Title>자소서 보관함</Title>
                 <Sub>생성한 자소서를 확인하고 저장하거나, 수정할 수 있어요.</Sub>
               </TitleGroup>
 
@@ -312,7 +312,7 @@ export default function StoreIntro() {
                         다운로드
                       </ActionButton>
 
-                      {/* ✅ 수정하기 버튼 추가 */}
+                      {/* ✅ 수정하기 버튼 추가 
                       <ActionButton
                         variant="edit"
                         onClick={(e) => {
@@ -320,10 +320,10 @@ export default function StoreIntro() {
                           handleOpenDoc(doc.id);
                         }}
                       >
-                        {/*
+                        
                         수정하기
                       </ActionButton>
-
+                      */}
                       <ActionButton
                         variant="delete"
                         onClick={(e) => {
@@ -331,7 +331,7 @@ export default function StoreIntro() {
                           handleDeleteDoc(doc.id);
                         }}
                       >
-                      */}
+                      
                         삭제하기
                       </ActionButton>
                     </Overlay>
