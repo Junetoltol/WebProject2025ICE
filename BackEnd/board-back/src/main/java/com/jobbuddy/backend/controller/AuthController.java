@@ -130,7 +130,6 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse<>(200, "성공적으로 로그아웃되었습니다.", null));
     }
 
-
     // ===== 핑 테스트 =====
     @GetMapping("/ping")
     public String ping() {
