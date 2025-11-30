@@ -1,11 +1,13 @@
 // src/pages/JoinMembership.jsx
 import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
+import { useNavigate } from "react-router-dom";
 import Header, { HEADER_H } from "../components/Header";
 import Background from "../components/Background";
-
-// 🔹 분리한 회원가입 API 함수 import
 import { signup } from "../api/auth";
+
+// ✅ 아이디: 6~12자의 영문/숫자 조합
+const USERNAME_REGEX = /^[A-Za-z0-9]{6,12}$/;
 
 /* 전역 변수 (색/간격 통일) */
 const Global = createGlobalStyle`
@@ -34,7 +36,7 @@ const PageBody = styled.main`
   padding-bottom: var(--gap-page-bottom);
 `;
 
-/* 중앙 카드 (개인정보 수정이랑 통일) */
+/* 중앙 카드 */
 const Card = styled.section`
   width: var(--card-w);
   border-radius: 24px;
@@ -66,7 +68,7 @@ const Label = styled.label`
   font-size: 14px;
 `;
 
-/* 인풋 공통 스타일 (포커스 시 테두리 색/두께 느낌 통일) */
+/* 인풋 공통 스타일 */
 const Input = styled.input`
   flex: 1;
   border-radius: 10px;
@@ -88,7 +90,7 @@ const Input = styled.input`
   }
 `;
 
-/* 버튼 공통 – hover/active + 그림자 */
+/* 버튼 공통 */
 const BtnBase = styled.button`
   width: 100%;
   border: none;
@@ -152,15 +154,19 @@ export default function JoinMembership() {
   });
 
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
+  // 입력 값 변경
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // 폼 제출
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 1) 필수값 체크
     if (
       !formData.username.trim() ||
       !formData.password.trim() ||
@@ -170,18 +176,30 @@ export default function JoinMembership() {
       return;
     }
 
+    // 2) 아이디 형식/길이 체크 (6~12자 영문/숫자)
+    if (!USERNAME_REGEX.test(formData.username)) {
+      alert("아이디는 6~12자의 영문/숫자 조합이어야 합니다.");
+      return;
+    }
+
     setLoading(true);
     try {
-      // 🔹 실제 요청은 api/auth.js 안의 signup 함수가 담당
-      const { message } = await signup(formData);
+      const res = await signup(formData);
 
-      alert(message || "회원가입이 완료되었습니다.");
+      const successMessage =
+        res?.message ||
+        res?.data?.message ||
+        "회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.";
 
-      // 필요하면 여기서 리다이렉트 추가 가능
-      // navigate("/login");
+      alert(successMessage);
+      navigate("/login");
     } catch (err) {
       console.error(err);
-      alert(err.message || "회원가입에 실패했습니다.");
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "회원가입에 실패했습니다.";
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -204,6 +222,8 @@ export default function JoinMembership() {
               value={formData.username}
               onChange={handleChange}
               placeholder="6~12자의 영문/숫자 조합"
+              minLength={6}
+              maxLength={12}
               required
             />
           </Group>
