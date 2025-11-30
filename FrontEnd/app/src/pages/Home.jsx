@@ -218,7 +218,7 @@ export default function Home() {
                 <strong>AI</strong>와 함께 쓰는 나만의 지원서
               </HeroTitle>
 
-              <SubText>자소서와 이력서, 이제 혼자가 아니라</SubText>
+              <SubText>자기소개서, 이제 혼자가 아니라</SubText>
               <LogoImage src={jobBuddyLogo} alt="Job Buddy 로고" />
               <SubText>와 함께해요!</SubText>
 
