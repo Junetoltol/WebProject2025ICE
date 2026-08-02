@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# Java / Gradle
+.gradle/
+build/
+*.class
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
